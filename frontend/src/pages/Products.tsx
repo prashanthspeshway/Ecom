@@ -1,0 +1,180 @@
+import { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { Filter, X } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
+import { useQuery } from "@tanstack/react-query";
+import { getProducts } from "@/lib/api";
+import type { Product } from "@/types/product";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const Products = () => {
+  const [priceRange, setPriceRange] = useState([0, 30000]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { data } = useQuery<Product[]>({ queryKey: ["products"], queryFn: getProducts });
+  const location = useLocation();
+  const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
+  const categoryParam = useMemo(() => new URLSearchParams(location.search).get("category"), [location.search]);
+  const products = useMemo(() => {
+    const list = (data || []).filter((p) => {
+      const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
+      const matchesCategoryParam = categoryParam ? p.category.toLowerCase().includes(categoryParam.toLowerCase()) : true;
+      const matchesCategorySelection = selectedCategories.length ? selectedCategories.includes(p.category) : true;
+      const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
+      return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesPrice;
+    });
+    return list;
+  }, [data, query, categoryParam, selectedCategories, priceRange]);
+
+  return (
+    <div className="container px-4 py-8">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-serif text-3xl md:text-4xl font-bold">Shop Sarees</h1>
+        <div className="flex items-center gap-4">
+          <Select defaultValue="popularity">
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="popularity">Popularity</SelectItem>
+              <SelectItem value="new">New Arrivals</SelectItem>
+              <SelectItem value="price-low">Price: Low to High</SelectItem>
+              <SelectItem value="price-high">Price: High to Low</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Filter Products</SheetTitle>
+              </SheetHeader>
+              <div className="mt-8 space-y-8">
+                {/* Price Range */}
+                <div>
+                  <h3 className="font-semibold mb-4">Price Range</h3>
+                  <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    max={30000}
+                    step={1000}
+                    className="mb-4"
+                  />
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>₹{priceRange[0].toLocaleString()}</span>
+                    <span>₹{priceRange[1].toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Categories */}
+                <div>
+                  <h3 className="font-semibold mb-4">Category</h3>
+                  <div className="space-y-3">
+                    {["Silk Sarees", "Banarasi", "Kanjeevaram", "Cotton", "Designer"].map(
+                      (category) => (
+                        <div key={category} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={category}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCategories([...selectedCategories, category]);
+                              } else {
+                                setSelectedCategories(
+                                  selectedCategories.filter((c) => c !== category)
+                                );
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={category}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {category}
+                          </label>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Occasion */}
+                <div>
+                  <h3 className="font-semibold mb-4">Occasion</h3>
+                  <div className="space-y-3">
+                    {["Wedding", "Festival", "Party", "Casual"].map((occasion) => (
+                      <div key={occasion} className="flex items-center space-x-2">
+                        <Checkbox id={occasion} />
+                        <label
+                          htmlFor={occasion}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {occasion}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button className="w-full">Apply Filters</Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+
+      {selectedCategories.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {selectedCategories.map((category) => (
+            <Button
+              key={category}
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                setSelectedCategories(selectedCategories.filter((c) => c !== category))
+              }
+            >
+              {category}
+              <X className="h-3 w-3 ml-2" />
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedCategories([])}
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Products;
