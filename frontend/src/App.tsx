@@ -13,6 +13,7 @@ import Account from "./pages/Account";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Admin from "./pages/Admin";
+import AdminProducts from "./pages/AdminProducts";
 import NotFound from "./pages/NotFound";
 import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
@@ -37,7 +38,8 @@ const App = () => (
             <Route path="/orders" element={<Orders />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

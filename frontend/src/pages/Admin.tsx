@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { authFetch, getRole } from "@/lib/auth";
+import { authFetch, getRole, getToken } from "@/lib/auth";
+ 
 import type { Product } from "@/types/product";
 import { ImagePlus, FileUp } from "lucide-react";
+import { Trash, X, Pencil, Plus } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { categories as categoryList } from "@/data/products";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -17,7 +21,7 @@ const Admin = () => {
   const role = getRole();
 
   useEffect(() => {
-    if (role !== "admin") navigate("/login");
+    if (role !== "admin" || !getToken()) navigate("/login");
   }, [role, navigate]);
 
   const { data: products = [] } = useQuery<Product[]>({
@@ -38,31 +42,28 @@ const Admin = () => {
       if (!res.ok) throw new Error("Create failed");
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<Product> }) => {
-      const res = await authFetch(`/api/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Update failed");
-      return res.json();
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.refetchQueries({ queryKey: ["admin-products"] });
+      qc.refetchQueries({ queryKey: ["products"] });
+      toast("Product created successfully");
+      setForm(initialForm);
+      setSelectedLeninSub("");
+      setThumbnailFile(null);
+      setFiles([null, null, null, null, null]);
+      setSelectedPreviewIndex(0);
+      setFilePickerIndex(null);
+      const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
+      if (thumbEl) thumbEl.value = "";
+      const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
+      if (multiEl) multiEl.value = "";
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await authFetch(`/api/products/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
-      return res.json();
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
-  });
+  
 
+  const initialForm = { name: "", brand: "", price: "", images: "", stock: "", category: "", discount: "" };
   const [form, setForm] = useState<{ name: string; brand: string; price: string; images: string; stock: string; category: string; discount: string }>({
     name: "",
     brand: "",
@@ -75,16 +76,280 @@ const Admin = () => {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null]);
   const [filePickerIndex, setFilePickerIndex] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [edit, setEdit] = useState<{ price: string; stock: string; discount: string }>({ price: "", stock: "", discount: "" });
-  const [editName, setEditName] = useState("");
-  const [editBrand, setEditBrand] = useState("");
-  const [editCategory, setEditCategory] = useState("");
+  
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
+  const { data: categoriesData = [] } = useQuery<string[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/categories");
+      return res.json();
+    },
+  });
+  const { data: subsByCat = {} as Record<string, string[]> } = useQuery<Record<string, string[]>>({
+    queryKey: ["subcategories-preview"],
+    queryFn: async () => {
+      const cats = categoriesData || [];
+      if (!cats.length) return {} as Record<string, string[]>;
+      const entries = await Promise.all(cats.map(async (c) => {
+        const res = await fetch(`/api/subcategories?category=${encodeURIComponent(c)}`);
+        const arr = await res.json();
+        return [c, arr] as const;
+      }));
+      return Object.fromEntries(entries);
+    },
+    enabled: (categoriesData || []).length > 0,
+  });
+
+  const topCategories = (() => {
+    const allSubs = new Set(Object.values(subsByCat || {}).flat());
+    return (categoriesData || []).filter((c) => !allSubs.has(c));
+  })();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmData, setConfirmData] = useState<
+    | { type: "category"; name: string }
+    | { type: "sub"; category: string; name: string }
+    | null
+  >(null);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState<string>("");
+  const [editingSub, setEditingSub] = useState<{ category: string; name: string } | null>(null);
+  const [editingSubValue, setEditingSubValue] = useState<string>("");
+  const [addingCategoryOpen, setAddingCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
+  const [newSubName, setNewSubName] = useState("");
+  const [manageCategory, setManageCategory] = useState<string>("Lenin");
+  const { data: manageSubcats = [] } = useQuery<string[]>({
+    queryKey: ["subcategories", manageCategory],
+    queryFn: async () => {
+      const res = await fetch(`/api/subcategories?category=${encodeURIComponent(manageCategory)}`);
+      return res.json();
+    },
+  });
+  const addCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await authFetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+      if (!res.ok) throw new Error("Add category failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.refetchQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: ["subcategories-preview"] });
+      qc.refetchQueries({ queryKey: ["subcategories-preview"] });
+      toast("Category added");
+      setNewCategoryName("");
+      setAddingCategoryOpen(false);
+    },
+  });
+  const delCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await authFetch(`/api/categories?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete category failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.refetchQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: ["subcategories-preview"] });
+      qc.refetchQueries({ queryKey: ["subcategories-preview"] });
+      toast("Category deleted");
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Delete failed";
+      toast(msg);
+    },
+  });
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+      const res = await authFetch("/api/categories", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ oldName, newName }) });
+      if (!res.ok) throw new Error("Update category failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.refetchQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: ["subcategories-preview", categoriesData] });
+      qc.refetchQueries({ queryKey: ["subcategories-preview", categoriesData] });
+      toast("Category updated");
+    },
+  });
+  const addSubMutation = useMutation({
+    mutationFn: async ({ category, name }: { category: string; name: string }) => {
+      const res = await authFetch("/api/subcategories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category, name }) });
+      if (!res.ok) throw new Error("Add subcategory failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["subcategories"] });
+      qc.refetchQueries({ queryKey: ["subcategories"] });
+      toast("Subcategory added");
+      qc.invalidateQueries({ queryKey: ["subcategories-preview"] });
+      qc.refetchQueries({ queryKey: ["subcategories-preview"] });
+      setAddingSubFor(null);
+      setNewSubName("");
+    },
+  });
+  const updateSubMutation = useMutation({
+    mutationFn: async ({ category, oldName, newName }: { category: string; oldName: string; newName: string }) => {
+      const res = await authFetch("/api/subcategories", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category, oldName, newName }) });
+      if (!res.ok) throw new Error("Update subcategory failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["subcategories"] });
+      qc.refetchQueries({ queryKey: ["subcategories"] });
+      qc.invalidateQueries({ queryKey: ["subcategories-preview"] });
+      qc.refetchQueries({ queryKey: ["subcategories-preview"] });
+      toast("Subcategory updated");
+    },
+  });
+  const delSubMutation = useMutation({
+    mutationFn: async ({ category, name }: { category: string; name: string }) => {
+      const res = await authFetch(`/api/subcategories?category=${encodeURIComponent(category)}&name=${encodeURIComponent(name)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete subcategory failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["subcategories"] });
+      qc.refetchQueries({ queryKey: ["subcategories"] });
+      qc.invalidateQueries({ queryKey: ["subcategories-preview"] });
+      qc.refetchQueries({ queryKey: ["subcategories-preview"] });
+      toast("Subcategory deleted");
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Delete failed";
+      toast(msg);
+    },
+  });
+  const [selectedLeninSub, setSelectedLeninSub] = useState<string>("");
+  const { data: banners = [] } = useQuery<string[]>({
+    queryKey: ["banners"],
+    queryFn: async () => {
+      const res = await fetch("/api/banners");
+      return res.json();
+    },
+  });
+  const addBannersMutation = useMutation({
+    mutationFn: async (urls: string[]) => {
+      const res = await authFetch("/api/banners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls }),
+      });
+      if (!res.ok) throw new Error("Add banners failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["banners"] });
+      qc.refetchQueries({ queryKey: ["banners"] });
+      toast("Banner updated");
+    },
+  });
+  const deleteBannerMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const res = await authFetch("/api/banners", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) throw new Error("Delete banner failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["banners"] });
+      qc.refetchQueries({ queryKey: ["banners"] });
+    },
+  });
+
+  const [adminSearchTerm, setAdminSearchTerm] = useState("");
+
+  function BestSellersManager({ products }: { products: Product[] }) {
+    const qc = useQueryClient();
+    const { data: current = [] } = useQuery<Product[]>({
+      queryKey: ["bestsellers"],
+      queryFn: async () => {
+        const res = await authFetch("/api/bestsellers");
+        return res.json();
+      },
+    });
+    const [selectedId, setSelectedId] = useState<string>("");
+    const addMutation = useMutation({
+      mutationFn: async (id: string) => {
+        const res = await authFetch("/api/bestsellers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: [id] }),
+        });
+        if (!res.ok) throw new Error("Add failed");
+        return res.json();
+      },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["bestsellers"] });
+        qc.refetchQueries({ queryKey: ["bestsellers"] });
+        toast("Added to bestsellers");
+      },
+    });
+    const delMutation = useMutation({
+      mutationFn: async (id: string) => {
+        const res = await authFetch(`/api/bestsellers/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Delete failed");
+        return res.json();
+      },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["bestsellers"] });
+        qc.refetchQueries({ queryKey: ["bestsellers"] });
+      },
+    });
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-2 items-center">
+          <select
+            className="border rounded-md px-2 py-1 bg-background"
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+          >
+            <option value="">Select product</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <Button onClick={() => selectedId && addMutation.mutate(selectedId)}>Add</Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {current.map((p) => (
+            <div key={p.id} className="rounded-lg overflow-hidden border">
+              <img src={p.images?.[0] ?? "/placeholder.svg"} alt={p.name} className="w-full h-40 object-cover" />
+              <div className="p-2 flex items-center justify-between">
+                <span className="text-sm font-medium truncate">{p.name}</span>
+                <Button variant="destructive" size="sm" onClick={() => delMutation.mutate(p.id)}>Remove</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container px-4 py-8">
-      <h1 className="font-serif text-3xl md:text-4xl font-bold mb-6">Admin Panel</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-serif text-3xl md:text-4xl font-bold">Admin Panel</h1>
+        <div className="flex items-center gap-2">
+          <Input
+            value={adminSearchTerm}
+            onChange={(e) => setAdminSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") navigate(`/admin/products?query=${encodeURIComponent(adminSearchTerm)}`);
+            }}
+            placeholder="Search products"
+            className="w-[260px]"
+          />
+          <Button onClick={() => navigate(`/admin/products?query=${encodeURIComponent(adminSearchTerm)}`)}>Search</Button>
+          <Button variant="outline" onClick={() => navigate("/admin/products")}>Manage Products</Button>
+        </div>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="bg-card rounded-lg p-6 space-y-4">
@@ -176,7 +441,36 @@ const Admin = () => {
           </div>
           <div>
             <Label>Category</Label>
-            <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <div className="space-y-2">
+              <Select value={form.category} onValueChange={(v) => {
+                setForm({ ...form, category: v });
+                if (v.toLowerCase() !== "lenin") setSelectedLeninSub("");
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {((categoriesData || []).filter((c) => !(manageSubcats || []).includes(c))).map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.category.toLowerCase() === "lenin" && (
+                <div>
+                  <Label>Lenin Subcategory</Label>
+                  <Select value={selectedLeninSub} onValueChange={setSelectedLeninSub}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subcategory" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {manageSubcats.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
           <Button
             onClick={async () => {
@@ -201,15 +495,25 @@ const Admin = () => {
               const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
               const urls = [] as string[];
               const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
-              createMutation.mutate({
+              await createMutation.mutateAsync({
                 name: form.name,
                 brand: form.brand,
                 price: Number(form.price),
                 images: imagesArray,
                 stock: Number(form.stock || 0),
-                category: form.category,
+                category: (form.category.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : form.category,
                 discount: form.discount ? Number(form.discount) : undefined,
               });
+              setForm(initialForm);
+              setSelectedLeninSub("");
+              setThumbnailFile(null);
+              setFiles([null, null, null, null, null]);
+              setSelectedPreviewIndex(0);
+              setFilePickerIndex(null);
+              const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
+              if (thumbEl) thumbEl.value = "";
+              const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
+              if (multiEl) multiEl.value = "";
             }}
           >
             Create
@@ -262,100 +566,238 @@ const Admin = () => {
           )}
         </div>
 
-        <div className="md:col-span-2 bg-card rounded-lg p-6">
-          <h2 className="font-serif text-2xl font-bold mb-4">Products</h2>
-          <div className="space-y-4">
-            {products.map((p: Product) => (
-              <div key={p.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold">{p.name}</p>
-                    <div className="flex gap-2">
-                      <Badge variant="outline">₹{p.price}</Badge>
-                      <Badge variant="secondary">{p.stock} in stock</Badge>
-                      {p.discount && <Badge>{p.discount}% OFF</Badge>}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingId(p.id);
-                        setEdit({ price: String(p.price), stock: String(p.stock), discount: String(p.discount ?? "") });
-                        setEditName(p.name);
-                        setEditBrand(p.brand);
-                        setEditCategory(p.category);
-                      }}
-                    >
-                      Update
-                    </Button>
-                    <Button variant="destructive" onClick={() => deleteMutation.mutate(p.id)}>Delete</Button>
-                  </div>
+        
+        <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
+          <h2 className="font-serif text-2xl font-bold">Banner Container</h2>
+          <div className="flex gap-2 items-center">
+            <input
+              id="banner-file"
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={async (e) => {
+                const list = Array.from(e.target.files || []);
+                if (!list.length) return;
+                const fd = new FormData();
+                list.forEach((f) => fd.append("files", f));
+                const res = await authFetch("/api/upload", { method: "POST", body: fd });
+                const data = await res.json();
+                const urls = data.urls || [];
+                if (urls.length) addBannersMutation.mutate(urls);
+                const bannerEl = document.getElementById("banner-file") as HTMLInputElement | null;
+                if (bannerEl) bannerEl.value = "";
+              }}
+            />
+            <Button variant="secondary" onClick={() => (document.getElementById("banner-file") as HTMLInputElement | null)?.click()}>Upload Images</Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {banners.map((u) => (
+              <div key={u} className="rounded-lg overflow-hidden border">
+                <img src={u} alt="banner" className="w-full h-40 object-cover" />
+                <div className="p-2 flex justify-end">
+                  <Button variant="destructive" size="sm" onClick={() => deleteBannerMutation.mutate(u)}>Delete</Button>
                 </div>
-
-                {editingId === p.id && (
-                  <div className="mt-4 grid sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label>Price</Label>
-                      <Input type="number" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label>Stock</Label>
-                      <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label>Discount (%)</Label>
-                      <Input type="number" value={edit.discount} onChange={(e) => setEdit({ ...edit, discount: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label>Name</Label>
-                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Brand</Label>
-                      <Input value={editBrand} onChange={(e) => setEditBrand(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Category</Label>
-                      <Select value={editCategory} onValueChange={(v) => setEditCategory(v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoryList.map((c) => (
-                            <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="sm:col-span-3 flex gap-2">
-                      <Button
-                        onClick={() => {
-                          updateMutation.mutate({
-                            id: p.id,
-                            payload: {
-                              price: Number(edit.price),
-                              stock: Number(edit.stock),
-                              discount: edit.discount ? Number(edit.discount) : undefined,
-                              name: editName,
-                              brand: editBrand,
-                              category: editCategory,
-                            },
-                          });
-                          setEditingId(null);
-                        }}
-                      >
-                        Save
-                      </Button>
-                      <Button variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
         </div>
+        <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-2xl font-bold">Categories</h2>
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => setAddingCategoryOpen((v) => !v)}
+              aria-label="Add category"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+          {addingCategoryOpen && (
+            <div className="flex gap-2">
+              <Input placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const name = newCategoryName.trim();
+                  if (!name) return;
+                  addCategoryMutation.mutate(name);
+                }}
+              >Add</Button>
+            </div>
+          )}
+          <div className="h-[600px] overflow-y-auto rounded-md border w-full">
+            <Accordion type="single" collapsible className="w-full">
+              {topCategories.map((c) => (
+                <AccordionItem key={c} value={c}>
+                  <AccordionTrigger className="px-3 pr-16">
+                    <div className="flex w-full items-center justify-between">
+                      {editingCategory === c ? (
+                        <div className="flex items-center gap-2">
+                          <Input value={editingCategoryValue} onChange={(e) => setEditingCategoryValue(e.target.value)} className="h-8 w-48" />
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const v = editingCategoryValue.trim();
+                              if (!v || v === c) { setEditingCategory(null); return; }
+                              updateCategoryMutation.mutate({ oldName: c, newName: v });
+                              setEditingCategory(null);
+                            }}
+                          >Save</Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCategory(null); }}
+                          >Cancel</Button>
+                        </div>
+                      ) : (
+                        <span>{c}</span>
+                      )}
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          className="ml-4 mr-2 text-muted-foreground hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingCategory(c);
+                            setEditingCategoryValue(c);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-2 mr-2 text-primary hover:underline"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setAddingSubFor(c);
+                          }}
+                          aria-label="Add subcategory"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-2 mr-4 text-destructive hover:underline"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmData({ type: "category", name: c });
+                            setConfirmOpen(true);
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3">
+                    {addingSubFor === c && (
+                      <div className="flex gap-2 mb-2">
+                        <Input placeholder="New subcategory" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} className="h-8" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            const name = newSubName.trim();
+                            if (!name) return;
+                            addSubMutation.mutate({ category: c, name });
+                          }}
+                        >Add</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setAddingSubFor(null); setNewSubName(""); }}>Cancel</Button>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {(subsByCat[c] || []).map((s) => (
+                        <span key={s} className="text-xs rounded-md border px-2 py-1 flex items-center gap-1">
+                          {editingSub && editingSub.category === c && editingSub.name === s ? (
+                            <>
+                              <Input value={editingSubValue} onChange={(e) => setEditingSubValue(e.target.value)} className="h-7 w-40 text-xs" />
+                              <Button
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                  const v = editingSubValue.trim();
+                                  if (!v || v === s) { setEditingSub(null); return; }
+                                  updateSubMutation.mutate({ category: c, oldName: s, newName: v });
+                                  setEditingSub(null);
+                                }}
+                              >Save</Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingSub(null)}>Cancel</Button>
+                            </>
+                          ) : (
+                            <>
+                              <span>{s}</span>
+                              <button
+                                type="button"
+                                className="ml-1 text-muted-foreground hover:text-foreground"
+                                onClick={() => { setEditingSub({ category: c, name: s }); setEditingSubValue(s); }}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                className="ml-1 text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  setConfirmData({ type: "sub", category: c, name: s });
+                                  setConfirmOpen(true);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+        
+        <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
+          <h2 className="font-serif text-2xl font-bold">Best Sellers</h2>
+          <BestSellersManager products={products} />
+        </div>
       </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmData
+                ? `Delete ${confirmData.type === "category" ? "category" : "subcategory"} "${confirmData.name}"?`
+                : ""}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete? Deleting this will remove {confirmData?.type === "category" ? "this category and all its subcategories" : "this subcategory"}.
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!confirmData) return;
+                if (confirmData.type === "category") {
+                  delCategoryMutation.mutate(confirmData.name);
+                } else {
+                  delSubMutation.mutate({ category: confirmData.category, name: confirmData.name });
+                }
+                setConfirmOpen(false);
+                setConfirmData(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

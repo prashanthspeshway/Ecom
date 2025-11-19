@@ -8,7 +8,9 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { getRole, clearAuth } from "@/lib/auth";
+import { getRole, getToken, clearAuth } from "@/lib/auth";
+import { clearCart } from "@/lib/cart";
+import { clearWishlist } from "@/lib/wishlist";
 import { getCount } from "@/lib/cart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -19,6 +21,7 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const [role, setRole] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [authed, setAuthed] = useState<boolean>(!!getToken());
   const location = useLocation();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -26,11 +29,13 @@ const Layout = ({ children }: LayoutProps) => {
   useEffect(() => {
     setRole(getRole());
     setCartCount(getCount());
+    setAuthed(!!getToken());
   }, [location.pathname]);
   useEffect(() => {
     const handler = () => {
       setRole(getRole());
       setCartCount(getCount());
+      setAuthed(!!getToken());
     };
     window.addEventListener("storage", handler);
     window.addEventListener("cart:update", handler as EventListener);
@@ -115,13 +120,15 @@ const Layout = ({ children }: LayoutProps) => {
                 variant="ghost"
                 onClick={() => {
                   clearAuth();
+                  clearCart();
+                  clearWishlist();
                   window.location.href = "/login";
                 }}
               >
                 Logout
               </Button>
             )}
-            {role !== "admin" ? (
+            {authed && role !== "admin" ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
@@ -132,11 +139,11 @@ const Layout = ({ children }: LayoutProps) => {
                   <DropdownMenuItem onSelect={() => navigate("/account")}>My Account</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => navigate("/wishlist")}>Wishlist</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => navigate("/orders")}>Orders</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => { clearAuth(); navigate("/login"); }}>Logout</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { clearAuth(); clearCart(); clearWishlist(); navigate("/login"); }}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link to="/account">
+              <Link to="/login">
                 <Button variant="ghost" size="icon">
                   <User className="h-5 w-5" />
                 </Button>

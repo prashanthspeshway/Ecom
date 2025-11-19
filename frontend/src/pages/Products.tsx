@@ -4,6 +4,7 @@ import { Filter, X } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "@/lib/api";
+import { leninSubcategories } from "@/data/products";
 import type { Product } from "@/types/product";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,16 +31,21 @@ const Products = () => {
   const location = useLocation();
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const categoryParam = useMemo(() => new URLSearchParams(location.search).get("category"), [location.search]);
+  const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   const products = useMemo(() => {
     const list = (data || []).filter((p) => {
       const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
-      const matchesCategoryParam = categoryParam ? p.category.toLowerCase().includes(categoryParam.toLowerCase()) : true;
+      const matchesCategoryParam = (() => {
+        if (subParam) return p.category.toLowerCase().includes(subParam.toLowerCase());
+        if (categoryParam) return p.category.toLowerCase().includes(categoryParam.toLowerCase());
+        return true;
+      })();
       const matchesCategorySelection = selectedCategories.length ? selectedCategories.includes(p.category) : true;
       const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
       return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesPrice;
     });
     return list;
-  }, [data, query, categoryParam, selectedCategories, priceRange]);
+  }, [data, query, categoryParam, subParam, selectedCategories, priceRange]);
 
   return (
     <div className="container px-4 py-8">
@@ -90,7 +96,7 @@ const Products = () => {
                 <div>
                   <h3 className="font-semibold mb-4">Category</h3>
                   <div className="space-y-3">
-                    {["Silk Sarees", "Banarasi", "Kanjeevaram", "Cotton", "Designer"].map(
+                    {["Silk Sarees", "Banarasi", "Kanjeevaram", "Cotton", "Designer", "Lenin"].map(
                       (category) => (
                         <div key={category} className="flex items-center space-x-2">
                           <Checkbox
@@ -165,6 +171,24 @@ const Products = () => {
           >
             Clear all
           </Button>
+        </div>
+      )}
+
+      {categoryParam?.toLowerCase() === "lenin" && (
+        <div className="mb-8">
+          <h2 className="font-serif text-2xl font-bold mb-4">Explore Lenin Collections</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {leninSubcategories.map((sub) => (
+              <a key={sub.name} href={`/products?category=lenin&sub=${encodeURIComponent(sub.name.toLowerCase())}`} className="group">
+                <div className="rounded-lg bg-card p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors border">
+                  {sub.image ? (
+                    <img src={sub.image} alt={sub.name} className="w-12 h-12 rounded object-cover" />
+                  ) : null}
+                  <span className="font-medium text-sm truncate">{sub.name}</span>
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
       )}
 

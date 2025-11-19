@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { authFetch, clearAuth, getRole } from "@/lib/auth";
+import { authFetch, clearAuth, getRole, getToken } from "@/lib/auth";
 import type { Product } from "@/types/product";
 import { addToCart } from "@/lib/cart";
 
@@ -28,6 +28,10 @@ const Account = () => {
         // no-op
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    if (!getToken()) navigate("/login");
   }, []);
 
   if (role === "admin") {
@@ -62,6 +66,7 @@ const Account = () => {
             variant="outline"
             onClick={() => {
               clearAuth();
+              try { localStorage.removeItem("cart_items"); localStorage.removeItem("wishlist_items"); } catch { void 0; }
               navigate("/login");
             }}
           >

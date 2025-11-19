@@ -7,24 +7,20 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    allowedHosts: ["localhost", "127.0.0.1", "3e6417044d58.ngrok-free.app"],
-    hmr: {
-      host: "3e6417044d58.ngrok-free.app",
-      protocol: "wss",
-      clientPort: 443,
-    },
+    allowedHosts: ["localhost", "127.0.0.1", "7114a8347d47.ngrok-free.app"],
+    hmr: false,
     proxy: {
       "/api": {
         target: "http://localhost:3000",
         changeOrigin: true,
-        secure: false
+        secure: false,
       },
       "/uploads": {
         target: "http://localhost:3000",
         changeOrigin: true,
-        secure: false
-      }
-    }
+        secure: false,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

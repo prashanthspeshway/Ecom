@@ -38,3 +38,7 @@ export function toggleWishlist(product: Product) {
 export function removeFromWishlist(id: string) {
   write(read().filter((p) => p.id !== id));
 }
+
+export function clearWishlist() {
+  write([]);
+}

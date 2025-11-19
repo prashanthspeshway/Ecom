@@ -12,9 +12,17 @@
     "price": 12999,
     "originalPrice": 15999,
     "discount": 19,
-    "colors": ["Emerald Green", "Gold"],
-    "fabrics": ["Pure Silk"],
-    "measurements": { "length": "6.3 meters", "width": "1.2 meters" },
+    "colors": [
+      "Emerald Green",
+      "Gold"
+    ],
+    "fabrics": [
+      "Pure Silk"
+    ],
+    "measurements": {
+      "length": "6.3 meters",
+      "width": "1.2 meters"
+    },
     "care": "Dry clean only",
     "stock": 15,
     "rating": 4.8,
@@ -42,9 +50,18 @@
     "price": 18999,
     "originalPrice": 22999,
     "discount": 17,
-    "colors": ["Royal Blue", "Gold", "Silver"],
-    "fabrics": ["Banarasi Silk"],
-    "measurements": { "length": "6.3 meters", "width": "1.2 meters" },
+    "colors": [
+      "Royal Blue",
+      "Gold",
+      "Silver"
+    ],
+    "fabrics": [
+      "Banarasi Silk"
+    ],
+    "measurements": {
+      "length": "6.3 meters",
+      "width": "1.2 meters"
+    },
     "care": "Dry clean only",
     "stock": 8,
     "rating": 4.9,
@@ -71,9 +88,17 @@
     "price": 9999,
     "originalPrice": 12999,
     "discount": 23,
-    "colors": ["Pink", "Gold"],
-    "fabrics": ["Silk"],
-    "measurements": { "length": "6.3 meters", "width": "1.2 meters" },
+    "colors": [
+      "Pink",
+      "Gold"
+    ],
+    "fabrics": [
+      "Silk"
+    ],
+    "measurements": {
+      "length": "6.3 meters",
+      "width": "1.2 meters"
+    },
     "care": "Dry clean only",
     "stock": 20,
     "rating": 4.7,
@@ -92,12 +117,20 @@
     "price": 24999,
     "originalPrice": 29999,
     "discount": 17,
-    "colors": ["Maroon", "Gold"],
-    "fabrics": ["Kanjeevaram Silk"],
-    "measurements": { "length": "6.3 meters", "width": "1.2 meters" },
+    "colors": [
+      "Maroon",
+      "Gold"
+    ],
+    "fabrics": [
+      "Kanjeevaram Silk"
+    ],
+    "measurements": {
+      "length": "6.3 meters",
+      "width": "1.2 meters"
+    },
     "care": "Dry clean only",
     "stock": 5,
-    "rating": 5.0,
+    "rating": 5,
     "reviews": [
       {
         "id": "r3",
@@ -109,5 +142,99 @@
     ],
     "category": "Kanjeevaram Sarees",
     "occasion": "Wedding"
+  },
+  {
+    "id": "0962abea-1e78-4f7b-8bbc-4042432f68ae",
+    "name": "new",
+    "brand": "new",
+    "images": [
+      "/uploads/1763445603502_product-4.jpg",
+      "/uploads/1763445603533_product-4.jpg",
+      "/uploads/1763445603533_hero-saree-3.jpg"
+    ],
+    "price": 12344,
+    "discount": 23,
+    "colors": [],
+    "fabrics": [],
+    "measurements": {
+      "length": "",
+      "width": ""
+    },
+    "care": "",
+    "stock": 1,
+    "rating": 0,
+    "reviews": [],
+    "category": "",
+    "occasion": ""
+  },
+  {
+    "id": "f6fb2462-d517-45a6-a615-84123b04e398",
+    "name": "banaras",
+    "brand": "banarass",
+    "images": [
+      "blob:http://localhost:8080/a50ac68d-97f6-4c8d-b33a-9062f010cbc3",
+      "/uploads/1763457624019_RA22126_zoom.jpg",
+      "/uploads/1763457624021_55555555555-500x500.webp",
+      "/uploads/1763457624023_44e1139b18c1059334a0158437ea53dc.jpg",
+      "/uploads/1763457624026_images__2_.jpg"
+    ],
+    "price": 34322,
+    "discount": 12,
+    "colors": [],
+    "fabrics": [],
+    "measurements": {
+      "length": "",
+      "width": ""
+    },
+    "care": "",
+    "stock": 55,
+    "rating": 0,
+    "reviews": [],
+    "category": "Banarasi Sarees",
+    "occasion": ""
+  },
+  {
+    "id": "1617ee45-83d6-41cc-804c-c1a756066ecd",
+    "name": "k",
+    "brand": "m",
+    "images": [
+      "/uploads/1763458042366_red-saree-golden-embroidery-mannequin-vibrant-intricate-draped-elegantly-traditional-garment-showcases-exquisite-391389281.webp"
+    ],
+    "price": 5555,
+    "discount": 12,
+    "colors": [],
+    "fabrics": [],
+    "measurements": {
+      "length": "",
+      "width": ""
+    },
+    "care": "",
+    "stock": 4,
+    "rating": 0,
+    "reviews": [],
+    "category": "Silk Sarees",
+    "occasion": ""
+  },
+  {
+    "id": "715c9bf2-acf3-418e-a648-eff6ead2c5af",
+    "name": "n",
+    "brand": "nm",
+    "images": [
+      "/uploads/1763458225755_44e1139b18c1059334a0158437ea53dc.jpg"
+    ],
+    "price": 55522,
+    "discount": 3,
+    "colors": [],
+    "fabrics": [],
+    "measurements": {
+      "length": "",
+      "width": ""
+    },
+    "care": "",
+    "stock": 4,
+    "rating": 0,
+    "reviews": [],
+    "category": "Silk Sarees",
+    "occasion": ""
   }
 ]
