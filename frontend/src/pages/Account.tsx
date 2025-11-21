@@ -76,7 +76,7 @@ const Account = () => {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">
               <User className="h-4 w-4 mr-2" />
               Profile
@@ -84,10 +84,6 @@ const Account = () => {
             <TabsTrigger value="orders">
               <Package className="h-4 w-4 mr-2" />
               Orders
-            </TabsTrigger>
-            <TabsTrigger value="addresses">
-              <MapPin className="h-4 w-4 mr-2" />
-              Addresses
             </TabsTrigger>
             <TabsTrigger value="wishlist">
               <Heart className="h-4 w-4 mr-2" />
@@ -107,28 +103,10 @@ const Account = () => {
           </TabsContent>
 
           <TabsContent value="orders">
-            <div className="bg-card rounded-lg p-6">
-              <h2 className="font-serif text-2xl font-bold mb-6">Order History</h2>
-              <div className="text-center py-12">
-                <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No orders yet</p>
-                <Button className="mt-4">Start Shopping</Button>
-              </div>
-            </div>
+            <OrdersContent />
           </TabsContent>
 
-          <TabsContent value="addresses">
-            <div className="bg-card rounded-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-serif text-2xl font-bold">Saved Addresses</h2>
-                <Button>Add New Address</Button>
-              </div>
-              <div className="text-center py-12">
-                <MapPin className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No saved addresses</p>
-              </div>
-            </div>
-          </TabsContent>
+          
 
           <TabsContent value="wishlist">
             <WishlistContent />
@@ -200,3 +178,71 @@ const WishlistContent = () => {
 };
 
 export default Account;
+const OrdersContent = () => {
+  const [orders, setOrders] = useState<any[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch("/api/orders");
+        if (res.ok) setOrders(await res.json());
+      } catch {}
+    })();
+  }, []);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const placeOrder = async () => {
+    try {
+      const res = await authFetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      if (res.ok) {
+        const list = await authFetch("/api/orders");
+        if (list.ok) setOrders(await list.json());
+        setErrorMsg(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg((data?.error as string) || "Order failed");
+      }
+    } catch {}
+  };
+  if (!orders.length) {
+    return (
+      <div className="bg-card rounded-lg p-6">
+        <h2 className="font-serif text-2xl font-bold mb-6">Order History</h2>
+        <div className="text-center py-12">
+          <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">No orders yet</p>
+          {errorMsg ? <p className="text-destructive mt-2 text-sm">{errorMsg}</p> : null}
+          <Button className="mt-4" onClick={placeOrder}>Place Order From Cart</Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-card rounded-lg p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-serif text-2xl font-bold">Order History</h2>
+        <Button variant="secondary" onClick={placeOrder}>Place Order From Cart</Button>
+      </div>
+          {orders.map((o) => (
+            <div key={o.id} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-medium">Order #{o.id}</div>
+                <div className="text-sm text-muted-foreground">{new Date(o.createdAt || Date.now()).toLocaleDateString()}</div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(o.items || []).map((it: any, idx: number) => (
+                  <a href={`/order/${o.id}`} key={String(idx)} className="flex items-center gap-3 border rounded-md p-2">
+                    <img src={it.image || "/placeholder.svg"} alt="p" className="w-16 h-16 rounded object-cover" />
+                    <div>
+                      <div className="font-semibold text-sm">{it.name}</div>
+                      <div className="text-xs text-muted-foreground">Qty: {it.quantity}</div>
+                      
+                    </div>
+                  </a>
+                ))}
+              </div>
+              <div className="mt-2 text-sm">Status: {o.status || "placed"}</div>
+              <div className="mt-2"><Button variant="secondary" asChild><a href={`/order/${o.id}`}>View Details</a></Button></div>
+            </div>
+          ))}
+    </div>
+  );
+};

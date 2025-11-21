@@ -29,10 +29,15 @@ const subcategoriesPath = path.join(process.cwd(), "data", "subcategories.json")
 let subcategories = {};
 const cartsPath = path.join(process.cwd(), "data", "carts.json");
 let carts = {};
+const ordersPath = path.join(process.cwd(), "data", "orders.json");
+let orders = {};
+let lastCheckout = {};
 const wishlistsPath = path.join(process.cwd(), "data", "wishlists.json");
 let wishlists = {};
 const categoryTilesPath = path.join(process.cwd(), "data", "category_tiles.json");
 let categoryTiles = {};
+const usersPath = path.join(process.cwd(), "data", "users.json");
+let fileUsers = [];
 
 function loadData() {
   try {
@@ -98,6 +103,14 @@ function loadData() {
     try { fs.writeFileSync(cartsPath, JSON.stringify(carts, null, 2)); } catch {}
   }
   try {
+    const raw = fs.readFileSync(ordersPath, "utf-8");
+    orders = JSON.parse(raw);
+  } catch (e) {
+    orders = {};
+    try { fs.mkdirSync(path.dirname(ordersPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(ordersPath, JSON.stringify(orders, null, 2)); } catch {}
+  }
+  try {
     const raw = fs.readFileSync(wishlistsPath, "utf-8");
     wishlists = JSON.parse(raw);
   } catch (e) {
@@ -112,6 +125,14 @@ function loadData() {
     categoryTiles = {};
     try { fs.mkdirSync(path.dirname(categoryTilesPath), { recursive: true }); } catch {}
     try { fs.writeFileSync(categoryTilesPath, JSON.stringify(categoryTiles, null, 2)); } catch {}
+  }
+  try {
+    const raw = fs.readFileSync(usersPath, "utf-8");
+    fileUsers = JSON.parse(raw);
+  } catch (e) {
+    fileUsers = [];
+    try { fs.mkdirSync(path.dirname(usersPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(usersPath, JSON.stringify(fileUsers, null, 2)); } catch {}
   }
 }
 
@@ -132,12 +153,13 @@ async function initDb() {
     }
 
     const users = db.collection("users");
+    try { await users.createIndex({ email: 1 }, { unique: true }); } catch {}
     const adminEmail = process.env.SEED_ADMIN_EMAIL;
     const adminPassword = process.env.SEED_ADMIN_PASSWORD;
     if (adminEmail && adminPassword) {
       const exists = await users.findOne({ email: adminEmail });
       if (!exists) {
-        const hash = await bcrypt.hash(adminPassword, 10);
+        const hash = bcrypt.hashSync(adminPassword, 10);
         await users.insertOne({ email: adminEmail, password: hash, role: "admin", name: "Admin" });
       }
     }
@@ -147,7 +169,7 @@ async function initDb() {
     if (userEmail && userPassword) {
       const exists = await users.findOne({ email: userEmail });
       if (!exists) {
-        const hash = await bcrypt.hash(userPassword, 10);
+        const hash = bcrypt.hashSync(userPassword, 10);
         await users.insertOne({ email: userEmail, password: hash, role: "user", name: "User" });
       }
     }
@@ -204,12 +226,36 @@ app.post("/api/auth/register", async (req, res) => {
     const { email, password, name, invite } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: "Email and password required" });
     const role = invite && process.env.ADMIN_INVITE_CODE && invite === process.env.ADMIN_INVITE_CODE ? "admin" : "user";
-    if (!db) return res.status(503).json({ error: "Database unavailable" });
+    if (!db) {
+      const existsFile = fileUsers.find((u) => u.email === email);
+      if (existsFile) return res.status(409).json({ error: "Email already registered" });
+      const hash = bcrypt.hashSync(password, 10);
+      fileUsers.push({ email, name: name || "", password: hash, role });
+      saveUsersToFile();
+      const token = signToken({ email, role });
+      return res.json({ token, role });
+    }
     const existing = await db.collection("users").findOne({ email });
     if (existing) return res.status(409).json({ error: "Email already registered" });
-    const hash = await bcrypt.hash(password, 10);
+    const hash = bcrypt.hashSync(password, 10);
     const user = { email, name: name || "", password: hash, role };
-    const { insertedId } = await db.collection("users").insertOne(user);
+    let insertedId;
+    try {
+      const r = await db.collection("users").insertOne(user);
+      insertedId = r.insertedId;
+    } catch (err) {
+      if (err && err.code === 11000) return res.status(409).json({ error: "Email already registered" });
+      try {
+        const existsFile = fileUsers.find((u) => u.email === email);
+        if (existsFile) return res.status(409).json({ error: "Email already registered" });
+        fileUsers.push({ email, name: name || "", password: hash, role });
+        saveUsersToFile();
+        const token = signToken({ email, role });
+        return res.json({ token, role });
+      } catch (e2) {
+        return res.status(500).json({ error: "Registration failed" });
+      }
+    }
     const token = signToken({ _id: insertedId, email, role });
     res.json({ token, role });
   } catch (e) {
@@ -221,27 +267,39 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: "Email and password required" });
-    if (!db) {
-      const adminEmail = process.env.SEED_ADMIN_EMAIL;
-      const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-      const userEmail = process.env.SEED_USER_EMAIL;
-      const userPassword = process.env.SEED_USER_PASSWORD;
-      if (adminEmail && adminPassword && email === adminEmail && password === adminPassword) {
-        const token = signToken({ email: adminEmail, role: "admin" });
-        return res.json({ token, role: "admin" });
-      }
-      if (userEmail && userPassword && email === userEmail && password === userPassword) {
-        const token = signToken({ email: userEmail, role: "user" });
-        return res.json({ token, role: "user" });
-      }
-      return res.status(503).json({ error: "Database unavailable" });
+  if (!db) {
+    const adminEmail = process.env.SEED_ADMIN_EMAIL;
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+    const userEmail = process.env.SEED_USER_EMAIL;
+    const userPassword = process.env.SEED_USER_PASSWORD;
+    if (adminEmail && adminPassword && email === adminEmail && password === adminPassword) {
+      const token = signToken({ email: adminEmail, role: "admin" });
+      return res.json({ token, role: "admin" });
     }
-    const user = await db.collection("users").findOne({ email });
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ error: "Invalid credentials" });
-    const token = signToken(user);
-    res.json({ token, role: user.role || "user" });
+    if (userEmail && userPassword && email === userEmail && password === userPassword) {
+      const token = signToken({ email: userEmail, role: "user" });
+      return res.json({ token, role: "user" });
+    }
+    const fuser = fileUsers.find((u) => u.email === email);
+    if (fuser && bcrypt.compareSync(password, fuser.password)) {
+      const token = signToken({ email: fuser.email, role: fuser.role || "user" });
+      return res.json({ token, role: fuser.role || "user" });
+    }
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+  const user = await db.collection("users").findOne({ email });
+  if (!user) {
+    const fuser = fileUsers.find((u) => u.email === email);
+    if (!fuser) return res.status(401).json({ error: "Invalid credentials" });
+    const okFile = bcrypt.compareSync(password, fuser.password);
+    if (!okFile) return res.status(401).json({ error: "Invalid credentials" });
+    const token = signToken({ email: fuser.email, role: fuser.role || "user" });
+    return res.json({ token, role: fuser.role || "user" });
+  }
+  const ok = bcrypt.compareSync(password, user.password);
+  if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+  const token = signToken(user);
+  res.json({ token, role: user.role || "user" });
   } catch (e) {
     res.status(500).json({ error: "Login failed" });
   }
@@ -403,18 +461,38 @@ app.delete("/api/products/:id", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-app.post("/api/checkout", (req, res) => {
-  res.json({ success: true });
+app.post("/api/checkout", authMiddleware, (req, res) => {
+  try {
+    const email = req.user?.email;
+    lastCheckout[email] = { ...(req.body || {}), date: Date.now() };
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
 });
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
+process.on("uncaughtException", (err) => { try { console.error("uncaughtException", err); } catch {} });
+process.on("unhandledRejection", (err) => { try { console.error("unhandledRejection", err); } catch {} });
 initDb().finally(() => {
-  app.listen(port, () => {
-    // no-op
-  });
+  try {
+    app.listen(port, () => {
+      console.log(`[backend] listening on http://localhost:${port}`);
+    });
+  } catch (e) {
+    console.error("listen-error", e);
+  }
 });
 
 app.post("/api/upload", authMiddleware, adminOnly, upload.array("files", 10), async (req, res) => {
+  try {
+    const files = (req.files || []).map((f) => `/uploads/${path.basename(f.path)}`);
+    res.json({ urls: files });
+  } catch (e) {
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+app.post("/api/upload-public", authMiddleware, upload.array("files", 3), async (req, res) => {
   try {
     const files = (req.files || []).map((f) => `/uploads/${path.basename(f.path)}`);
     res.json({ urls: files });
@@ -453,6 +531,11 @@ function saveCartsToFile() {
     fs.writeFileSync(cartsPath, JSON.stringify(carts, null, 2));
   } catch {}
 }
+function saveOrdersToFile() {
+  try {
+    fs.writeFileSync(ordersPath, JSON.stringify(orders, null, 2));
+  } catch {}
+}
 function saveWishlistsToFile() {
   try {
     fs.writeFileSync(wishlistsPath, JSON.stringify(wishlists, null, 2));
@@ -461,6 +544,11 @@ function saveWishlistsToFile() {
 function saveCategoryTilesToFile() {
   try {
     fs.writeFileSync(categoryTilesPath, JSON.stringify(categoryTiles, null, 2));
+  } catch {}
+}
+function saveUsersToFile() {
+  try {
+    fs.writeFileSync(usersPath, JSON.stringify(fileUsers, null, 2));
   } catch {}
 }
 // Categories API
@@ -825,6 +913,122 @@ app.delete("/api/cart", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Failed" });
   }
 });
+app.get("/api/orders", authMiddleware, async (req, res) => {
+  try {
+    if (db) {
+      const list = await db.collection("orders").find({ user: req.user.email }).sort({ createdAt: -1 }).toArray();
+      return res.json(list.map((o) => ({ id: o.id || String(o._id), items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() })));
+    }
+    const list = Array.isArray(orders[req.user.email]) ? orders[req.user.email] : [];
+    res.json(list);
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+app.get("/api/orders/:id", authMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (db) {
+      const o = await db.collection("orders").findOne({ $or: [{ id, user: req.user.email }, { _id: id, user: req.user.email }] });
+      if (!o) return res.status(404).json({ error: "Not found" });
+      return res.json({ id: o.id || String(o._id), user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() });
+    }
+    const list = Array.isArray(orders[req.user.email]) ? orders[req.user.email] : [];
+    const o = list.find((x) => x.id === id);
+    if (!o) return res.status(404).json({ error: "Not found" });
+    res.json(o);
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+app.post("/api/orders", authMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {};
+    let items = Array.isArray(body.items) ? body.items : [];
+    if (!items.length) {
+      if (db) {
+        const cartItems = await db.collection("cart").find({ user: req.user.email }).toArray();
+        items = cartItems.map((c) => ({ productId: c.productId, quantity: Number(c.quantity || 1) }));
+      } else {
+        const list = Array.isArray(carts[req.user.email]) ? carts[req.user.email] : [];
+        items = list.map((c) => ({ productId: c.productId, quantity: Number(c.quantity || 1) }));
+      }
+    }
+    if (!items.length) return res.status(400).json({ error: "Cart is empty" });
+    const enriched = items.map((it) => {
+      const p = products.find((x) => x.id === it.productId) || {};
+      return {
+        productId: it.productId,
+        quantity: it.quantity,
+        price: Number(p.price || 0),
+        name: p.name || "",
+        image: (p.images || [])[0] || "",
+        progress: { placed: Date.now() },
+      };
+    });
+    const order = { id: String(Date.now()), user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: lastCheckout[req.user.email] || null };
+    if (db) {
+      await db.collection("orders").insertOne(order);
+      await db.collection("cart").deleteMany({ user: req.user.email });
+    } else {
+      const list = Array.isArray(orders[req.user.email]) ? orders[req.user.email] : [];
+      orders[req.user.email] = [order, ...list];
+      saveOrdersToFile();
+      carts[req.user.email] = [];
+      saveCartsToFile();
+    }
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+// Admin per-item stage update
+app.put("/api/admin/orders/:id/item/:pid", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const pid = req.params.pid;
+    const { stage } = req.body || {};
+    const valid = new Set(["placed", "dispatched", "in_transit", "shipped", "out_for_delivery", "delivered"]);
+    if (!stage || !valid.has(stage)) return res.status(400).json({ error: "invalid stage" });
+    if (db) {
+      const order = await db.collection("orders").findOne({ $or: [{ id }, { _id: id }] });
+      if (!order) return res.status(404).json({ error: "Not found" });
+      const items = Array.isArray(order.items) ? order.items : [];
+      const idx = items.findIndex((it) => it.productId === pid);
+      if (idx === -1) return res.status(404).json({ error: "Item not found" });
+      const progress = items[idx].progress || {};
+      progress[stage] = Date.now();
+      items[idx].progress = progress;
+      const nextStatus = ["placed", "dispatched", "in_transit", "shipped", "out_for_delivery", "delivered"].findLast((s) => progress[s]);
+      await db.collection("orders").updateOne({ $or: [{ id }, { _id: id }] }, { $set: { items, status: nextStatus || order.status } });
+      return res.json({ success: true });
+    }
+    let found = false;
+    for (const email of Object.keys(orders)) {
+      const list = Array.isArray(orders[email]) ? orders[email] : [];
+      const oIdx = list.findIndex((o) => o.id === id);
+      if (oIdx >= 0) {
+        const items = Array.isArray(list[oIdx].items) ? list[oIdx].items : [];
+        const iIdx = items.findIndex((it) => it.productId === pid);
+        if (iIdx === -1) break;
+        const progress = items[iIdx].progress || {};
+        progress[stage] = Date.now();
+        items[iIdx].progress = progress;
+        const nextStatus = ["placed", "dispatched", "in_transit", "shipped", "out_for_delivery", "delivered"].findLast((s) => progress[s]);
+        list[oIdx].items = items;
+        list[oIdx].status = nextStatus || list[oIdx].status;
+        orders[email] = list;
+        saveOrdersToFile();
+        found = true;
+        break;
+      }
+    }
+    if (!found) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true, order });
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
 app.get("/api/wishlist", authMiddleware, async (req, res) => {
   try {
     if (db) {
@@ -940,6 +1144,97 @@ app.delete("/api/category-tiles", authMiddleware, adminOnly, async (req, res) =>
       if (key) delete categoryTiles[key];
     }
     saveCategoryTilesToFile();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+app.post("/api/products/:id/reviews", authMiddleware, async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { rating, comment, images } = req.body || {};
+    const r = Number(rating);
+    if (!productId || !r || r < 1 || r > 5) return res.status(400).json({ error: "invalid rating" });
+    let purchased = false;
+    if (db) {
+      const found = await db.collection("orders").findOne({ user: req.user.email, items: { $elemMatch: { productId } } });
+      purchased = Boolean(found);
+    } else {
+      const list = Array.isArray(orders[req.user.email]) ? orders[req.user.email] : [];
+      purchased = list.some((o) => (o.items || []).some((it) => it.productId === productId));
+    }
+    if (!purchased) return res.status(403).json({ error: "Not allowed" });
+    if (db) {
+      const p = await db.collection("products").findOne({ id: productId });
+      if (!p) return res.status(404).json({ error: "Not found" });
+      const review = { id: String(Date.now()), author: req.user.email, rating: r, comment: String(comment || ""), date: new Date().toISOString().slice(0,10), images: Array.isArray(images) ? images.slice(0,3) : [] };
+      const nextReviews = Array.isArray(p.reviews) ? [...p.reviews, review] : [review];
+      const nextRating = nextReviews.length ? Number((nextReviews.reduce((s, a) => s + Number(a.rating || 0), 0) / nextReviews.length).toFixed(1)) : 0;
+      await db.collection("products").updateOne({ id: productId }, { $set: { reviews: nextReviews, rating: nextRating } });
+      return res.json(review);
+    }
+    const p = products.find((x) => x.id === productId);
+    if (!p) return res.status(404).json({ error: "Not found" });
+    const review = { id: String(Date.now()), author: req.user.email, rating: r, comment: String(comment || ""), date: new Date().toISOString().slice(0,10), images: Array.isArray(images) ? images.slice(0,3) : [] };
+    p.reviews = Array.isArray(p.reviews) ? [...p.reviews, review] : [review];
+    p.rating = p.reviews.length ? Number((p.reviews.reduce((s, a) => s + Number(a.rating || 0), 0) / p.reviews.length).toFixed(1)) : 0;
+    saveProductsToFile();
+    res.json(review);
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+
+// Admin Orders APIs
+app.get("/api/admin/orders", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    if (db) {
+      const list = await db.collection("orders").find({}).sort({ createdAt: -1 }).toArray();
+      return res.json(list.map((o) => ({ id: o.id || String(o._id), user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() })));
+    }
+    const arr = Object.entries(orders).flatMap(([email, list]) => (Array.isArray(list) ? list.map((o) => ({ ...o, user: email })) : []));
+    arr.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    res.json(arr);
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+app.get("/api/admin/orders/:id", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (db) {
+      const o = await db.collection("orders").findOne({ $or: [{ id }, { _id: id }] });
+      if (!o) return res.status(404).json({ error: "Not found" });
+      return res.json({ id: o.id || String(o._id), user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() });
+    }
+    for (const email of Object.keys(orders)) {
+      const list = Array.isArray(orders[email]) ? orders[email] : [];
+      const o = list.find((x) => x.id === id);
+      if (o) return res.json({ ...o, user: email });
+    }
+    res.status(404).json({ error: "Not found" });
+  } catch (e) {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+app.put("/api/admin/orders/:id", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body || {};
+    if (!status) return res.status(400).json({ error: "status required" });
+    if (db) {
+      const r = await db.collection("orders").updateOne({ $or: [{ id }, { _id: id }] }, { $set: { status } });
+      if (!r.matchedCount) return res.status(404).json({ error: "Not found" });
+      return res.json({ success: true });
+    }
+    let updated = false;
+    for (const email of Object.keys(orders)) {
+      const list = Array.isArray(orders[email]) ? orders[email] : [];
+      const idx = list.findIndex((o) => o.id === id);
+      if (idx >= 0) { list[idx].status = status; orders[email] = list; updated = true; break; }
+    }
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    saveOrdersToFile();
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "Failed" });

@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductCard from "@/components/ProductCard";
 import { addToCart } from "@/lib/cart";
+import { authFetch, getToken } from "@/lib/auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { toggleWishlist, isWishlisted } from "@/lib/wishlist";
 
 const ProductDetail = () => {
@@ -19,15 +21,33 @@ const ProductDetail = () => {
     queryFn: () => (id ? getProduct(id) : Promise.resolve(undefined)),
   });
   const { data: all } = useQuery<Product[]>({ queryKey: ["products"], queryFn: getProducts });
+  const qc = useQueryClient();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState("");
   const [deliveryMsg, setDeliveryMsg] = useState<string | null>(null);
   const [wish, setWish] = useState(false);
+  const [ratingSel, setRatingSel] = useState(0);
+  const [comment, setComment] = useState("");
+  const [revImages, setRevImages] = useState<File[]>([]);
+  const [canReview, setCanReview] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     setWish(product ? isWishlisted(product.id) : false);
+  }, [id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!getToken()) { setCanReview(false); return; }
+        const res = await authFetch("/api/orders");
+        if (!res.ok) { setCanReview(false); return; }
+        const list = await res.json();
+        const ok = Array.isArray(list) && list.some((o: any) => (o.items || []).some((it: any) => it.productId === id));
+        setCanReview(ok);
+      } catch { setCanReview(false); }
+    })();
   }, [id]);
 
   if (!product) {
@@ -214,9 +234,7 @@ const ProductDetail = () => {
               </Button>
             </div>
 
-            <Button size="lg" variant="secondary" className="w-full">
-              Buy Now
-            </Button>
+            
 
             
           </div>
@@ -275,11 +293,64 @@ const ProductDetail = () => {
                     <span className="text-sm text-muted-foreground">{review.date}</span>
                   </div>
                   <p className="text-muted-foreground">{review.comment}</p>
+                  {Array.isArray(review.images) && review.images.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {review.images.slice(0,3).map((src, idx) => (
+                        <a key={src + String(idx)} href={src || "/placeholder.svg"} target="_blank" rel="noopener noreferrer">
+                          <img src={src || "/placeholder.svg"} alt="rev" className="w-full h-20 rounded-md object-cover border" />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ))
             ) : (
               <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
             )}
+            {canReview ? (
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  {[...Array(5)].map((_, i) => (
+                    <button key={i} onClick={() => setRatingSel(i + 1)} aria-label="rate" className="p-1">
+                      <Star className={`h-5 w-5 ${i < ratingSel ? "fill-accent text-accent" : "text-muted"}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea className="w-full border rounded-md p-2" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write your review" />
+                <div className="flex items-center gap-2">
+                  <input id="rev-images" type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                    const list = Array.from(e.target.files || []).slice(0,3);
+                    setRevImages(list);
+                  }} />
+                  <Button variant="secondary" onClick={() => (document.getElementById("rev-images") as HTMLInputElement | null)?.click()}>Add Images</Button>
+                  <span className="text-xs text-muted-foreground">Up to 3 images</span>
+                </div>
+                <div className="flex gap-2">
+                  {revImages.map((f, idx) => (
+                    <img key={String(idx)} src={URL.createObjectURL(f)} className="w-16 h-16 rounded-md object-cover border" />
+                  ))}
+                </div>
+                <Button onClick={async () => {
+                  try {
+                    if (!ratingSel) return;
+                    let urls: string[] = [];
+                    if (revImages.length) {
+                      const fd = new FormData();
+                      revImages.forEach((f) => fd.append("files", f));
+                      const upRes = await authFetch("/api/upload-public", { method: "POST", body: fd });
+                      const up = await upRes.json();
+                      urls = up.urls || [];
+                    }
+                    const res = await authFetch(`/api/products/${id}/reviews`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rating: ratingSel, comment, images: urls }) });
+                    if (res.ok) {
+                      setRatingSel(0); setComment(""); setRevImages([]);
+                      qc.invalidateQueries({ queryKey: ["product", id] });
+                      qc.refetchQueries({ queryKey: ["product", id] });
+                    }
+                  } catch {}
+                }}>Submit Review</Button>
+              </div>
+            ) : null}
           </TabsContent>
         </Tabs>
 

@@ -26,7 +26,7 @@
     },
     "care": "Dry clean only",
     "stock": 15,
-    "rating": 4.8,
+    "rating": 4.5,
     "reviews": [
       {
         "id": "r1",
@@ -34,6 +34,16 @@
         "rating": 5,
         "comment": "Absolutely stunning saree! The silk quality is exceptional.",
         "date": "2024-01-15"
+      },
+      {
+        "id": "1763720053377",
+        "author": "user1@gmail.com",
+        "rating": 4,
+        "comment": "nice",
+        "date": "2025-11-21",
+        "images": [
+          "/uploads/1763720053360_product-4.jpg"
+        ]
       }
     ],
     "category": "Silk Sarees",
@@ -241,7 +251,7 @@
   },
   {
     "id": "e939f54a-0953-4450-aaef-cdfa4043615b",
-    "name": "hello",
+    "name": "kanchipuram",
     "brand": "hello",
     "images": [
       "/uploads/1763628129290_3.webp",
@@ -261,8 +271,39 @@
     },
     "care": "",
     "stock": 1,
-    "rating": 0,
-    "reviews": [],
+    "rating": 3.3,
+    "reviews": [
+      {
+        "id": "1763719013691",
+        "author": "user3@gmail.com",
+        "rating": 4,
+        "comment": "awesome product ",
+        "date": "2025-11-21",
+        "images": [
+          "/uploads/1763719013672_hero-saree-3.jpg"
+        ]
+      },
+      {
+        "id": "1763720600548",
+        "author": "user1@gmail.com",
+        "rating": 3,
+        "comment": "ok ",
+        "date": "2025-11-21",
+        "images": [
+          "/uploads/1763720600525_product-1.jpg"
+        ]
+      },
+      {
+        "id": "1763722292537",
+        "author": "user1@gmail.com",
+        "rating": 3,
+        "comment": "not bad",
+        "date": "2025-11-21",
+        "images": [
+          "/uploads/1763722292480_hero-saree-3.jpg"
+        ]
+      }
+    ],
     "category": "Lenin Ikkat",
     "occasion": "",
     "createdAt": 1763628129369

@@ -6,10 +6,17 @@
     },
     {
       "productId": "2",
-      "quantity": 1
+      "quantity": 3
     },
     {
       "productId": "3",
+      "quantity": 1
+    }
+  ],
+  "user1@gmail.com": [],
+  "user3@gmail.com": [
+    {
+      "productId": "1",
       "quantity": 1
     }
   ]

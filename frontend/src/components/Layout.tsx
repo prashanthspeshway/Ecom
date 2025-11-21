@@ -11,7 +11,8 @@ import {
 import { getRole, getToken, clearAuth } from "@/lib/auth";
 import { clearCart, getCount, syncCartFromServer } from "@/lib/cart";
 import { clearWishlist, syncWishlistFromServer } from "@/lib/wishlist";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { getEmail } from "@/lib/auth";
 
 interface LayoutProps {
   children: ReactNode;
@@ -21,6 +22,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [role, setRole] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [authed, setAuthed] = useState<boolean>(!!getToken());
+  const [adminOrdersCount, setAdminOrdersCount] = useState<number>(0);
   const location = useLocation();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -35,6 +37,20 @@ const Layout = ({ children }: LayoutProps) => {
         setCartCount(getCount());
       }).catch(() => {});
     }
+    (async () => {
+      try {
+        const r = getRole();
+        if (r === "admin") {
+          const res = await fetch("/api/admin/orders", { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+          if (res.ok) {
+            const list = await res.json();
+            setAdminOrdersCount(Array.isArray(list) ? list.length : 0);
+          }
+        } else {
+          setAdminOrdersCount(0);
+        }
+      } catch { setAdminOrdersCount(0); }
+    })();
   }, [location.pathname]);
   useEffect(() => {
     const handler = () => {
@@ -116,24 +132,33 @@ const Layout = ({ children }: LayoutProps) => {
               </div>
             )}
             {role === "admin" && (
-              <Link to="/admin">
-                <Button variant="ghost">Admin</Button>
-              </Link>
+              <>
+                <Link to="/admin">
+                  <Button variant="ghost">Admin</Button>
+                </Link>
+                <Link to="/admin/orders">
+                  <Button variant="ghost" className="relative">
+                    Orders
+                    <span className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] px-1 flex items-center justify-center">
+                      {adminOrdersCount}
+                    </span>
+                  </Button>
+                </Link>
+              </>
             )}
-            {role === "admin" && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  clearAuth();
-                  clearCart();
-                  clearWishlist();
-                  window.location.href = "/login";
-                }}
-              >
-                Logout
-              </Button>
-            )}
-            {authed && role !== "admin" ? (
+            {role === "admin" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="p-1">
+                  <DropdownMenuLabel>{getEmail() || "Admin"}</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => { clearAuth(); clearCart(); clearWishlist(); navigate("/login"); }}>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : authed ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">

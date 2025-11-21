@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { login, getRole } from "@/lib/auth";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,20 +25,78 @@ const Login = () => {
           <Label htmlFor="password">Password</Label>
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        <Button
-          className="w-full"
-          onClick={async () => {
-            try {
-              await login({ email, password });
-              const role = getRole();
-              navigate(role === "admin" ? "/admin" : "/account");
-            } catch (e) {
-              setError("Invalid credentials");
-            }
-          }}
-        >
-          Sign In
-        </Button>
+        <div className="flex gap-2 sm:hidden">
+          <Button
+            className="flex-1"
+            onClick={async () => {
+              try {
+                await login({ email, password });
+                const role = getRole();
+                const params = new URLSearchParams(location.search);
+                const redirect = params.get("redirect");
+                if (redirect) navigate(redirect);
+                else navigate(role === "admin" ? "/admin" : "/account");
+              } catch (e) {
+                if (e instanceof TypeError) {
+                  setError("Backend is not connected");
+                  return;
+                }
+                const msg = e instanceof Error ? e.message : "LOGIN_FAILED";
+                if (msg === "INVALID_CREDENTIALS") setError("Wrong credentials");
+                else setError("Login failed");
+              }
+            }}
+          >
+            Sign In
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              const params = new URLSearchParams(location.search);
+              const redirect = params.get("redirect");
+              navigate(redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register");
+            }}
+          >
+            Sign Up
+          </Button>
+        </div>
+        <div className="hidden sm:flex gap-2">
+          <Button
+            className="flex-1"
+            onClick={async () => {
+              try {
+                await login({ email, password });
+                const role = getRole();
+                const params = new URLSearchParams(location.search);
+                const redirect = params.get("redirect");
+                if (redirect) navigate(redirect);
+                else navigate(role === "admin" ? "/admin" : "/account");
+              } catch (e) {
+                if (e instanceof TypeError) {
+                  setError("Backend is not connected");
+                  return;
+                }
+                const msg = e instanceof Error ? e.message : "LOGIN_FAILED";
+                if (msg === "INVALID_CREDENTIALS") setError("Wrong credentials");
+                else setError("Login failed");
+              }
+            }}
+          >
+            Sign In
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              const params = new URLSearchParams(location.search);
+              const redirect = params.get("redirect");
+              navigate(redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register");
+            }}
+          >
+            Sign Up
+          </Button>
+        </div>
       </div>
     </div>
   );

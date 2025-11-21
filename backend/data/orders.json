@@ -1,0 +1,140 @@
+{
+  "user3@gmail.com": [
+    {
+      "id": "1763713116671",
+      "user": "user3@gmail.com",
+      "items": [
+        {
+          "productId": "e939f54a-0953-4450-aaef-cdfa4043615b",
+          "quantity": 1,
+          "price": 5999,
+          "name": "kanchipuram",
+          "image": "/uploads/1763628129290_3.webp",
+          "progress": {
+            "placed": 1763718142808,
+            "dispatched": 1763718145430,
+            "in_transit": 1763718267765,
+            "shipped": 1763718269520,
+            "out_for_delivery": 1763718437436,
+            "delivered": 1763718596941
+          }
+        }
+      ],
+      "status": "delivered",
+      "createdAt": 1763713116671
+    }
+  ],
+  "user1@gmail.com": [
+    {
+      "id": "1763722234942",
+      "user": "user1@gmail.com",
+      "items": [
+        {
+          "productId": "e939f54a-0953-4450-aaef-cdfa4043615b",
+          "quantity": 1,
+          "price": 5999,
+          "name": "kanchipuram",
+          "image": "/uploads/1763628129290_3.webp",
+          "progress": {
+            "placed": 1763722234942,
+            "dispatched": 1763722257257,
+            "in_transit": 1763722263953,
+            "shipped": 1763722269384,
+            "out_for_delivery": 1763722274707,
+            "delivered": 1763722276124
+          }
+        }
+      ],
+      "status": "delivered",
+      "createdAt": 1763722234942,
+      "shipping": {
+        "address": {
+          "first": "wvw.k",
+          "last": "kflkwj",
+          "email": "lksjjdsl",
+          "phone": "lkjsalkjfd",
+          "address": "lkjdfjq",
+          "city": "lkdjfl",
+          "state": "lkdjf;l",
+          "pincode": "lkdjlkgj"
+        },
+        "payment": "cod",
+        "date": 1763722234911
+      }
+    },
+    {
+      "id": "1763720438432",
+      "user": "user1@gmail.com",
+      "items": [
+        {
+          "productId": "e939f54a-0953-4450-aaef-cdfa4043615b",
+          "quantity": 1,
+          "price": 5999,
+          "name": "kanchipuram",
+          "image": "/uploads/1763628129290_3.webp",
+          "progress": {
+            "placed": 1763720438432,
+            "dispatched": 1763720566454,
+            "in_transit": 1763720567806,
+            "shipped": 1763720569518,
+            "out_for_delivery": 1763720570689,
+            "delivered": 1763720571814
+          }
+        }
+      ],
+      "status": "delivered",
+      "createdAt": 1763720438432,
+      "shipping": {
+        "address": {
+          "first": "ujhg",
+          "last": "jgdgfh",
+          "email": "hhg",
+          "phone": "hgfdhg",
+          "address": "hhjq",
+          "city": "hfhj",
+          "state": "jhhj",
+          "pincode": "kuku"
+        },
+        "payment": "cod",
+        "date": 1763720438396
+      }
+    },
+    {
+      "id": "1763719458553",
+      "user": "user1@gmail.com",
+      "items": [
+        {
+          "productId": "1",
+          "quantity": 1,
+          "price": 12999,
+          "name": "Emerald Silk Saree",
+          "image": "/images/product-1.jpg",
+          "progress": {
+            "placed": 1763719458553,
+            "dispatched": 1763719879224,
+            "delivered": 1763719963625,
+            "in_transit": 1763719970923,
+            "shipped": 1763719972069,
+            "out_for_delivery": 1763719973590
+          }
+        }
+      ],
+      "status": "delivered",
+      "createdAt": 1763719458553,
+      "shipping": {
+        "address": {
+          "first": "sajdfa;",
+          "last": "ljsaljdf",
+          "email": "ljsljfa",
+          "phone": "slakjd",
+          "address": "jsfj",
+          "city": "sljadlf",
+          "state": "jalsf",
+          "pincode": "jaslfj"
+        },
+        "payment": "cod",
+        "date": 1763719458544
+      }
+    }
+  ]
+}

@@ -1,11 +1,21 @@
 import type { Product } from "@/types/product";
 import { authFetch, getToken } from "@/lib/auth";
 
-const KEY = "wishlist_items";
+function currentKey(): string {
+  const token = getToken();
+  if (!token) return "wishlist_items_guest";
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const email = (payload?.email || "guest").toString();
+    return `wishlist_items_${email}`;
+  } catch {
+    return "wishlist_items_guest";
+  }
+}
 
 function read(): Product[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(currentKey());
     return raw ? (JSON.parse(raw) as Product[]) : [];
   } catch {
     return [];
@@ -13,7 +23,7 @@ function read(): Product[] {
 }
 
 function write(items: Product[]) {
-  localStorage.setItem(KEY, JSON.stringify(items));
+  localStorage.setItem(currentKey(), JSON.stringify(items));
   window.dispatchEvent(new Event("wishlist:update"));
 }
 
@@ -26,6 +36,12 @@ export function isWishlisted(id: string): boolean {
 }
 
 export function toggleWishlist(product: Product) {
+  const token = getToken();
+  if (!token) {
+    const dest = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    window.location.href = dest;
+    return;
+  }
   const items = read();
   const idx = items.findIndex((p) => p.id === product.id);
   if (idx >= 0) {
@@ -34,7 +50,6 @@ export function toggleWishlist(product: Product) {
     items.push(product);
   }
   write(items);
-  const token = getToken();
   if (token) {
     const exists = idx >= 0;
     if (exists) {
@@ -52,8 +67,13 @@ export function toggleWishlist(product: Product) {
 }
 
 export function removeFromWishlist(id: string) {
-  write(read().filter((p) => p.id !== id));
   const token = getToken();
+  if (!token) {
+    const dest = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    window.location.href = dest;
+    return;
+  }
+  write(read().filter((p) => p.id !== id));
   if (token) {
     authFetch(`/api/wishlist?productId=${encodeURIComponent(id)}`, { method: "DELETE" })
       .then(() => { syncWishlistFromServer().catch(() => {}); })
@@ -62,8 +82,13 @@ export function removeFromWishlist(id: string) {
 }
 
 export function clearWishlist() {
-  write([]);
   const token = getToken();
+  if (!token) {
+    const dest = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    window.location.href = dest;
+    return;
+  }
+  write([]);
   if (token) {
     authFetch(`/api/wishlist?all=1`, { method: "DELETE" })
       .then(() => { syncWishlistFromServer().catch(() => {}); })

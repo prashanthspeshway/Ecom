@@ -22,7 +22,13 @@ export async function register(payload: { email: string; password: string; name?
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Registration failed");
+  if (!res.ok) {
+    let msg = "";
+    try { msg = (await res.json()).error || ""; } catch (err) { void err; }
+    if (res.status === 409) throw new Error("EMAIL_EXISTS");
+    if (res.status === 503) throw new Error("BACKEND_UNAVAILABLE");
+    throw new Error("REGISTRATION_FAILED");
+  }
   const data = await res.json();
   setToken(data.token, data.role);
   await syncAccountStateAfterAuth();
@@ -35,7 +41,13 @@ export async function login(payload: { email: string; password: string }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Login failed");
+  if (!res.ok) {
+    let msg = "";
+    try { msg = (await res.json()).error || ""; } catch (err) { void err; }
+    if (res.status === 401) throw new Error("INVALID_CREDENTIALS");
+    if (res.status === 503) throw new Error("BACKEND_UNAVAILABLE");
+    throw new Error("LOGIN_FAILED");
+  }
   const data = await res.json();
   setToken(data.token, data.role);
   await syncAccountStateAfterAuth();
@@ -56,8 +68,10 @@ async function syncAccountStateAfterAuth() {
   try {
     const token = getToken();
     if (!token) return;
-    const rawCart = localStorage.getItem("cart_items");
-    const rawWish = localStorage.getItem("wishlist_items");
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const email = (payload?.email || "guest").toString();
+    const rawCart = localStorage.getItem("cart_items_guest");
+    const rawWish = localStorage.getItem("wishlist_items_guest");
     const cartItems = rawCart ? JSON.parse(rawCart) as Array<{ product: { id: string }; quantity: number }> : [];
     const wishItems = rawWish ? JSON.parse(rawWish) as Array<{ id: string }> : [];
     for (const it of cartItems) {
@@ -73,9 +87,25 @@ async function syncAccountStateAfterAuth() {
         await authFetch("/api/wishlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) });
       }
     }
+    localStorage.removeItem("cart_items_guest");
+    localStorage.removeItem("wishlist_items_guest");
+    localStorage.removeItem(`cart_items_${email}`);
+    localStorage.removeItem(`wishlist_items_${email}`);
     await syncCartFromServer();
     await syncWishlistFromServer();
   } catch {
     // no-op
+  }
+}
+
+export function getEmail(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const email = payload?.email;
+    return typeof email === "string" ? email : null;
+  } catch {
+    return null;
   }
 }
