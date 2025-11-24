@@ -19,5 +19,11 @@
       "productId": "1",
       "quantity": 1
     }
+  ],
+  "admin@example.com": [
+    {
+      "productId": "3",
+      "quantity": 1
+    }
   ]
 }

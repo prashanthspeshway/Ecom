@@ -16,5 +16,17 @@
     "name": "user3",
     "password": "$2a$10$XP7xK8ahm7fP0Zm0NXSQgu2YOVRhKTmLDvpAy4a2u1nnlhU6ERdUK",
     "role": "user"
+  },
+  {
+    "email": "admin@example.com",
+    "name": "Admin",
+    "password": "$2a$10$ClH1wCEYfvBsNLjUkhiLweBoIEGeKu5KvX7qmi./D0hcKPabVz4jG",
+    "role": "admin"
+  },
+  {
+    "email": "user@example.com",
+    "name": "User",
+    "password": "$2a$10$RlO7913xk6bCOJVfMwca5uqidh5oxUTWzSLmlc7f0wHk7uJVdAhLq",
+    "role": "user"
   }
 ]

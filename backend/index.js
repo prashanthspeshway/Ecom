@@ -3,40 +3,45 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 import { MongoClient } from "mongodb";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import crypto from "crypto";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, ".env") });
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-const dataPath = path.join(process.cwd(), "data", "products.json");
+const dataPath = path.join(__dirname, "data", "products.json");
 let products = [];
 let dbClient = null;
 let db = null;
-const categoriesPath = path.join(process.cwd(), "data", "categories.json");
+let s3 = null;
+const categoriesPath = path.join(__dirname, "data", "categories.json");
 let categories = [];
-const bannersPath = path.join(process.cwd(), "data", "banners.json");
+const bannersPath = path.join(__dirname, "data", "banners.json");
 let banners = [];
-const bestsellersPath = path.join(process.cwd(), "data", "bestsellers.json");
+const bestsellersPath = path.join(__dirname, "data", "bestsellers.json");
 let bestsellerIds = [];
-const subcategoriesPath = path.join(process.cwd(), "data", "subcategories.json");
+const subcategoriesPath = path.join(__dirname, "data", "subcategories.json");
 let subcategories = {};
-const cartsPath = path.join(process.cwd(), "data", "carts.json");
+const cartsPath = path.join(__dirname, "data", "carts.json");
 let carts = {};
-const ordersPath = path.join(process.cwd(), "data", "orders.json");
+const ordersPath = path.join(__dirname, "data", "orders.json");
 let orders = {};
 let lastCheckout = {};
-const wishlistsPath = path.join(process.cwd(), "data", "wishlists.json");
+const wishlistsPath = path.join(__dirname, "data", "wishlists.json");
 let wishlists = {};
-const categoryTilesPath = path.join(process.cwd(), "data", "category_tiles.json");
+const categoryTilesPath = path.join(__dirname, "data", "category_tiles.json");
 let categoryTiles = {};
-const usersPath = path.join(process.cwd(), "data", "users.json");
+const usersPath = path.join(__dirname, "data", "users.json");
 let fileUsers = [];
 
 function loadData() {
@@ -154,42 +159,64 @@ async function initDb() {
 
     const users = db.collection("users");
     try { await users.createIndex({ email: 1 }, { unique: true }); } catch {}
-    const adminEmail = process.env.SEED_ADMIN_EMAIL;
-    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-    if (adminEmail && adminPassword) {
-      const exists = await users.findOne({ email: adminEmail });
-      if (!exists) {
-        const hash = bcrypt.hashSync(adminPassword, 10);
-        await users.insertOne({ email: adminEmail, password: hash, role: "admin", name: "Admin" });
+    // migrate file-based data to Mongo when collections are empty
+    try {
+      const catColl = db.collection("categories");
+      if (await catColl.countDocuments() === 0 && Array.isArray(categories) && categories.length) {
+        await catColl.insertMany(categories.map((name) => ({ name })));
       }
-    }
-
-    const userEmail = process.env.SEED_USER_EMAIL;
-    const userPassword = process.env.SEED_USER_PASSWORD;
-    if (userEmail && userPassword) {
-      const exists = await users.findOne({ email: userEmail });
-      if (!exists) {
-        const hash = bcrypt.hashSync(userPassword, 10);
-        await users.insertOne({ email: userEmail, password: hash, role: "user", name: "User" });
+      const subColl = db.collection("subcategories");
+      if (await subColl.countDocuments() === 0 && subcategories && typeof subcategories === "object") {
+        const rows = Object.entries(subcategories).flatMap(([category, arr]) => (arr || []).map((name) => ({ category, name })));
+        if (rows.length) await subColl.insertMany(rows);
       }
-    }
+      const banColl = db.collection("banners");
+      if (await banColl.countDocuments() === 0 && Array.isArray(banners) && banners.length) {
+        await banColl.insertMany(banners.map((url) => ({ url })));
+      }
+      const bestColl = db.collection("bestsellers");
+      if (await bestColl.countDocuments() === 0 && Array.isArray(bestsellerIds) && bestsellerIds.length) {
+        await bestColl.insertMany(bestsellerIds.map((id) => ({ id })));
+      }
+      const ordColl = db.collection("orders");
+      if (await ordColl.countDocuments() === 0 && orders && typeof orders === "object") {
+        const rows = Object.entries(orders).flatMap(([user, list]) => (Array.isArray(list) ? list.map((o) => ({ ...o, user })) : []));
+        if (rows.length) await ordColl.insertMany(rows);
+      }
+      const cartColl = db.collection("cart");
+      if (await cartColl.countDocuments() === 0 && carts && typeof carts === "object") {
+        const rows = Object.entries(carts).flatMap(([user, list]) => (Array.isArray(list) ? list.map((c) => ({ user, productId: c.productId, quantity: Number(c.quantity || 1) })) : []));
+        if (rows.length) await cartColl.insertMany(rows);
+      }
+      const wishColl = db.collection("wishlist");
+      if (await wishColl.countDocuments() === 0 && wishlists && typeof wishlists === "object") {
+        const rows = Object.entries(wishlists).flatMap(([user, list]) => (Array.isArray(list) ? list.map((w) => ({ user, productId: w.productId })) : []));
+        if (rows.length) await wishColl.insertMany(rows);
+      }
+    } catch {}
   } catch (e) {
     db = null;
   }
 }
 
-// file upload setup
-const uploadDir = path.join(process.cwd(), "uploads");
+// upload setup: S3 if configured, else local disk
+const hasS3 = Boolean(process.env.S3_BUCKET && process.env.S3_REGION && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY);
+if (hasS3) {
+  s3 = new S3Client({
+    region: process.env.S3_REGION,
+    credentials: { accessKeyId: process.env.S3_ACCESS_KEY_ID, secretAccessKey: process.env.S3_SECRET_ACCESS_KEY },
+  });
+}
+const uploadDir = path.join(__dirname, "uploads");
 try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
-const storage = multer.diskStorage({
+const upload = multer({ storage: hasS3 ? multer.memoryStorage() : multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const base = path.basename(file.originalname, ext).replace(/[^a-z0-9_-]/gi, "_");
     cb(null, `${Date.now()}_${base}${ext}`);
   },
-});
-const upload = multer({ storage });
+}) });
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
@@ -268,18 +295,6 @@ app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: "Email and password required" });
   if (!db) {
-    const adminEmail = process.env.SEED_ADMIN_EMAIL;
-    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-    const userEmail = process.env.SEED_USER_EMAIL;
-    const userPassword = process.env.SEED_USER_PASSWORD;
-    if (adminEmail && adminPassword && email === adminEmail && password === adminPassword) {
-      const token = signToken({ email: adminEmail, role: "admin" });
-      return res.json({ token, role: "admin" });
-    }
-    if (userEmail && userPassword && email === userEmail && password === userPassword) {
-      const token = signToken({ email: userEmail, role: "user" });
-      return res.json({ token, role: "user" });
-    }
     const fuser = fileUsers.find((u) => u.email === email);
     if (fuser && bcrypt.compareSync(password, fuser.password)) {
       const token = signToken({ email: fuser.email, role: fuser.role || "user" });
@@ -486,18 +501,54 @@ initDb().finally(() => {
 
 app.post("/api/upload", authMiddleware, adminOnly, upload.array("files", 10), async (req, res) => {
   try {
+    if (s3) {
+      const uploaded = [];
+      for (const file of (req.files || [])) {
+        const ext = path.extname(file.originalname);
+        const base = path.basename(file.originalname, ext).replace(/[^a-z0-9_-]/gi, "_");
+        const Key = `uploads/${Date.now()}_${base}${ext}`;
+        try {
+          await s3.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key, Body: file.buffer, ContentType: file.mimetype }));
+          const url = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${Key}`;
+          uploaded.push(url);
+        } catch (err) {
+          const localName = `${Date.now()}_${base}${ext}`;
+          const localPath = path.join(uploadDir, localName);
+          try { fs.writeFileSync(localPath, file.buffer); uploaded.push(`/uploads/${localName}`); } catch {}
+        }
+      }
+      return res.json({ urls: uploaded });
+    }
     const files = (req.files || []).map((f) => `/uploads/${path.basename(f.path)}`);
     res.json({ urls: files });
   } catch (e) {
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Upload failed", detail: String(e?.message || e) });
   }
 });
 app.post("/api/upload-public", authMiddleware, upload.array("files", 3), async (req, res) => {
   try {
+    if (s3) {
+      const uploaded = [];
+      for (const file of (req.files || [])) {
+        const ext = path.extname(file.originalname);
+        const base = path.basename(file.originalname, ext).replace(/[^a-z0-9_-]/gi, "_");
+        const Key = `uploads/${Date.now()}_${base}${ext}`;
+        try {
+          await s3.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key, Body: file.buffer, ContentType: file.mimetype }));
+          const url = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${Key}`;
+          uploaded.push(url);
+        } catch (err) {
+          const localName = `${Date.now()}_${base}${ext}`;
+          const localPath = path.join(uploadDir, localName);
+          try { fs.writeFileSync(localPath, file.buffer); uploaded.push(`/uploads/${localName}`); } catch {}
+        }
+      }
+      return res.json({ urls: uploaded });
+    }
     const files = (req.files || []).map((f) => `/uploads/${path.basename(f.path)}`);
     res.json({ urls: files });
   } catch (e) {
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Upload failed", detail: String(e?.message || e) });
   }
 });
 function saveProductsToFile() {
@@ -541,6 +592,118 @@ function saveWishlistsToFile() {
     fs.writeFileSync(wishlistsPath, JSON.stringify(wishlists, null, 2));
   } catch {}
 }
+
+function isHttp(u) {
+  return typeof u === "string" && /^https?:\/\//.test(u);
+}
+function extMime(ext) {
+  const e = (ext || "").toLowerCase();
+  if (e === ".jpg" || e === ".jpeg") return "image/jpeg";
+  if (e === ".png") return "image/png";
+  if (e === ".webp") return "image/webp";
+  if (e === ".gif") return "image/gif";
+  return "application/octet-stream";
+}
+function resolveLocal(p) {
+  if (!p || typeof p !== "string") return null;
+  if (p.startsWith("/uploads/")) {
+    return path.join(uploadDir, path.basename(p));
+  }
+  if (p.startsWith("/images/")) {
+    return path.join(process.cwd(), "..", "frontend", "public", "images", path.basename(p));
+  }
+  return null;
+}
+async function uploadLocalPath(localPath, baseName) {
+  try {
+    const buf = fs.readFileSync(localPath);
+    const ext = path.extname(baseName || localPath);
+    const key = `uploads/${Date.now()}_${path.basename(baseName || localPath)}`;
+    await s3.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key, Body: buf, ContentType: extMime(ext) }));
+    return `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${key}`;
+  } catch {
+    return null;
+  }
+}
+async function migrateImagesArray(arr) {
+  if (!Array.isArray(arr)) return arr;
+  const out = [];
+  for (const u of arr) {
+    if (isHttp(u) || !hasS3) { out.push(u); continue; }
+    const lp = resolveLocal(u);
+    if (!lp) { out.push(u); continue; }
+    const url = await uploadLocalPath(lp, path.basename(u));
+    out.push(url || u);
+  }
+  return out;
+}
+async function migrateProduct(p) {
+  const images = await migrateImagesArray(p.images || []);
+  const reviews = Array.isArray(p.reviews) ? await Promise.all(p.reviews.map(async (r) => ({ ...r, images: await migrateImagesArray(r.images || []) }))) : (p.reviews || []);
+  return { ...p, images, reviews };
+}
+app.post("/api/admin/migrate-images", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    if (!hasS3 || !s3) return res.status(400).json({ error: "S3 not configured" });
+    let migrated = 0;
+    if (db) {
+      const all = await db.collection("products").find({}).toArray();
+      for (const p of all) {
+        const np = await migrateProduct(p);
+        if (JSON.stringify(np.images) !== JSON.stringify(p.images) || JSON.stringify(np.reviews) !== JSON.stringify(p.reviews)) migrated++;
+        await db.collection("products").updateOne({ _id: p._id }, { $set: { images: np.images, reviews: np.reviews } });
+      }
+      try {
+        const bannersColl = db.collection("banners");
+        const bannersDocs = await bannersColl.find({}).toArray();
+        for (const b of bannersDocs) {
+          const newUrl = await migratePathToS3(b.url);
+          if (newUrl !== b.url) { migrated++; await bannersColl.updateOne({ _id: b._id }, { $set: { url: newUrl } }); }
+        }
+      } catch {}
+    } else {
+      const next = [];
+      for (const p of products) {
+        const np = await migrateProduct(p);
+        next.push(np);
+      }
+      products = next;
+      saveProductsToFile();
+      migrated = products.length;
+      try {
+        const updated = [];
+        for (const u of banners) { updated.push(await migratePathToS3(u)); }
+        banners = updated; saveBannersToFile();
+      } catch {}
+      try {
+        const ct = {};
+        for (const [k, v] of Object.entries(categoryTiles || {})) { ct[k] = typeof v === "string" ? await migratePathToS3(v) : v; }
+        categoryTiles = ct;
+        saveCategoryTilesToFile();
+      } catch {}
+    }
+    res.json({ success: true, migrated });
+  } catch (e) {
+    res.status(500).json({ error: "Migration failed" });
+  }
+});
+
+app.get("/api/admin/s3-check", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const info = { configured: Boolean(hasS3 && s3), bucket: process.env.S3_BUCKET, region: process.env.S3_REGION };
+    if (!hasS3 || !s3) return res.status(400).json(info);
+    try {
+      const testKey = `uploads/ping_${Date.now()}.txt`;
+      await s3.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: testKey, Body: Buffer.from("ping") }));
+      info.putTest = { ok: true, key: testKey, url: `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${testKey}` };
+    } catch (e) {
+      info.putTest = { ok: false, error: String(e?.message || e) };
+    }
+    res.json(info);
+  } catch (e) {
+    res.status(500).json({ error: "Check failed" });
+  }
+});
 function saveCategoryTilesToFile() {
   try {
     fs.writeFileSync(categoryTilesPath, JSON.stringify(categoryTiles, null, 2));
@@ -1238,5 +1401,44 @@ app.put("/api/admin/orders/:id", authMiddleware, adminOnly, async (req, res) => 
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: "Failed" });
+  }
+});
+app.post("/api/admin/migrate-uploads", authMiddleware, adminOnly, async (req, res) => {
+  try {
+    if (!hasS3 || !s3) return res.status(400).json({ error: "S3 not configured" });
+    let count = 0;
+    let uploadedKeys = [];
+    let errors = [];
+    try {
+      function walk(dir) {
+        const out = [];
+        try {
+          for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
+            const p = path.join(dir, d.name);
+            if (d.isDirectory()) out.push(...walk(p)); else if (d.isFile()) out.push(p);
+          }
+        } catch {}
+        return out;
+      }
+      const roots = [
+        uploadDir,
+        path.join(path.resolve(__dirname, ".."), "uploads"),
+        path.join(path.resolve(__dirname, ".."), "frontend", "public", "uploads"),
+        path.join(path.resolve(__dirname, ".."), "frontend", "public", "images"),
+      ];
+      for (const root of roots) {
+        for (const lp of walk(root)) {
+          try {
+            const url = await uploadLocalPath(lp, path.basename(lp));
+            if (url) { count++; uploadedKeys.push(url); } else { errors.push({ file: lp, error: "upload-failed" }); }
+          } catch (e) {
+            errors.push({ file: lp, error: String(e?.message || e) });
+          }
+        }
+      }
+    } catch {}
+    res.json({ success: true, count, urls: uploadedKeys, errors });
+  } catch (e) {
+    res.status(500).json({ error: "Migration failed" });
   }
 });

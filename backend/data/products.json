@@ -4,11 +4,11 @@
     "name": "Emerald Silk Saree",
     "brand": "Saree Elegance",
     "images": [
-      "/images/product-1.jpg",
-      "/images/hero-saree-1.jpg",
-      "/images/hero-saree-2.jpg",
-      "/images/hero-saree-3.jpg",
-      "/uploads/1763620749145_600-TT11JUN27038.webp"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153328_product-1.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153478_hero-saree-1.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153540_hero-saree-2.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153616_hero-saree-3.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153672_1763620749145_600-TT11JUN27038.webp"
     ],
     "price": 12999,
     "originalPrice": 15999,
@@ -33,7 +33,8 @@
         "author": "Priya S.",
         "rating": 5,
         "comment": "Absolutely stunning saree! The silk quality is exceptional.",
-        "date": "2024-01-15"
+        "date": "2024-01-15",
+        "images": []
       },
       {
         "id": "1763720053377",
@@ -42,7 +43,7 @@
         "comment": "nice",
         "date": "2025-11-21",
         "images": [
-          "/uploads/1763720053360_product-4.jpg"
+          "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153767_1763720053360_product-4.jpg"
         ]
       }
     ],
@@ -54,9 +55,9 @@
     "name": "Royal Blue Banarasi",
     "brand": "Saree Elegance",
     "images": [
-      "/images/product-2.jpg",
-      "/images/hero-saree-2.jpg",
-      "/images/hero-saree-3.jpg"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153825_product-2.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153869_hero-saree-2.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973153950_hero-saree-3.jpg"
     ],
     "price": 18999,
     "originalPrice": 22999,
@@ -82,7 +83,8 @@
         "author": "Anjali K.",
         "rating": 5,
         "comment": "The zari work is breathtaking. Perfect for special occasions.",
-        "date": "2024-01-20"
+        "date": "2024-01-20",
+        "images": []
       }
     ],
     "category": "Banarasi Sarees",
@@ -93,8 +95,8 @@
     "name": "Pink Floral Silk",
     "brand": "Saree Elegance",
     "images": [
-      "/images/product-3.jpg",
-      "/images/hero-saree-1.jpg"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154041_product-3.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154082_hero-saree-1.jpg"
     ],
     "price": 9999,
     "originalPrice": 12999,
@@ -122,8 +124,8 @@
     "name": "Maroon Kanjeevaram",
     "brand": "Saree Elegance",
     "images": [
-      "/images/product-4.jpg",
-      "/images/hero-saree-3.jpg"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154128_product-4.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154192_hero-saree-3.jpg"
     ],
     "price": 24999,
     "originalPrice": 29999,
@@ -148,7 +150,8 @@
         "author": "Lakshmi M.",
         "rating": 5,
         "comment": "Heritage quality Kanjeevaram. Worth every rupee!",
-        "date": "2024-01-25"
+        "date": "2024-01-25",
+        "images": []
       }
     ],
     "category": "Kanjeevaram Sarees",
@@ -159,9 +162,9 @@
     "name": "new",
     "brand": "new",
     "images": [
-      "/uploads/1763445603502_product-4.jpg",
-      "/uploads/1763445603533_product-4.jpg",
-      "/uploads/1763445603533_hero-saree-3.jpg"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154292_1763445603502_product-4.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154336_1763445603533_product-4.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154376_1763445603533_hero-saree-3.jpg"
     ],
     "price": 12344,
     "discount": 23,
@@ -183,12 +186,12 @@
     "name": "banaras",
     "brand": "banarass",
     "images": [
-      "/uploads/1763457624019_RA22126_zoom.jpg",
-      "/uploads/1763457624021_55555555555-500x500.webp",
-      "/uploads/1763457624023_44e1139b18c1059334a0158437ea53dc.jpg",
-      "/uploads/1763457624026_images__2_.jpg",
-      "/uploads/1763623413337_4479S205_1.webp",
-      "/uploads/1763623421849_3579S2516_3.webp"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154422_1763457624019_RA22126_zoom.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154504_1763457624021_55555555555-500x500.webp",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154557_1763457624023_44e1139b18c1059334a0158437ea53dc.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154604_1763457624026_images__2_.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154670_1763623413337_4479S205_1.webp",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154769_1763623421849_3579S2516_3.webp"
     ],
     "price": 34322,
     "discount": 12,
@@ -210,7 +213,7 @@
     "name": "k",
     "brand": "m",
     "images": [
-      "/uploads/1763458042366_red-saree-golden-embroidery-mannequin-vibrant-intricate-draped-elegantly-traditional-garment-showcases-exquisite-391389281.webp"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154844_1763458042366_red-saree-golden-embroidery-mannequin-vibrant-intricate-draped-elegantly-traditional-garment-showcases-exquisite-391389281.webp"
     ],
     "price": 5555,
     "discount": 12,
@@ -232,7 +235,7 @@
     "name": "n",
     "brand": "nm",
     "images": [
-      "/uploads/1763458225755_44e1139b18c1059334a0158437ea53dc.jpg"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154885_1763458225755_44e1139b18c1059334a0158437ea53dc.jpg"
     ],
     "price": 55522,
     "discount": 3,
@@ -254,11 +257,11 @@
     "name": "kanchipuram",
     "brand": "hello",
     "images": [
-      "/uploads/1763628129290_3.webp",
-      "/uploads/1763628129322_44e1139b18c1059334a0158437ea53dc.jpg",
-      "/uploads/1763628129324_4479S205_1.webp",
-      "/uploads/1763628129336_red-saree-golden-embroidery-mannequin-vibrant-intricate-draped-elegantly-traditional-garment-showcases-exquisite-391389281.webp",
-      "/uploads/1763628129340_44e1139b18c1059334a0158437ea53dc.jpg"
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973154958_1763628129290_3.webp",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155025_1763628129322_44e1139b18c1059334a0158437ea53dc.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155088_1763628129324_4479S205_1.webp",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155205_1763628129336_red-saree-golden-embroidery-mannequin-vibrant-intricate-draped-elegantly-traditional-garment-showcases-exquisite-391389281.webp",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155257_1763628129340_44e1139b18c1059334a0158437ea53dc.jpg"
     ],
     "price": 5999,
     "originalPrice": 6499,
@@ -280,7 +283,7 @@
         "comment": "awesome product ",
         "date": "2025-11-21",
         "images": [
-          "/uploads/1763719013672_hero-saree-3.jpg"
+          "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155302_1763719013672_hero-saree-3.jpg"
         ]
       },
       {
@@ -290,7 +293,7 @@
         "comment": "ok ",
         "date": "2025-11-21",
         "images": [
-          "/uploads/1763720600525_product-1.jpg"
+          "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155303_1763720600525_product-1.jpg"
         ]
       },
       {
@@ -300,12 +303,40 @@
         "comment": "not bad",
         "date": "2025-11-21",
         "images": [
-          "/uploads/1763722292480_hero-saree-3.jpg"
+          "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763973155304_1763722292480_hero-saree-3.jpg"
         ]
       }
     ],
     "category": "Lenin Ikkat",
     "occasion": "",
     "createdAt": 1763628129369
+  },
+  {
+    "id": "22484bfe-8241-4a85-8750-9f318d85de71",
+    "name": "alsjfja",
+    "brand": "",
+    "images": [
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763972664196_product-1.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763972664395_product-2.jpg",
+      "https://new-sarees-bucket-speshway.s3.ap-south-1.amazonaws.com/uploads/1763972664479_hero-saree-1.jpg"
+    ],
+    "price": 43143,
+    "originalPrice": 423423,
+    "saveAmount": 1232,
+    "discount": 23,
+    "colors": [],
+    "fabrics": [],
+    "measurements": {
+      "length": "",
+      "width": ""
+    },
+    "care": "",
+    "colorLinks": [],
+    "stock": 1,
+    "rating": 0,
+    "reviews": [],
+    "category": "Lenin Ikkat",
+    "occasion": "",
+    "createdAt": 1763972664560
   }
 ]
