@@ -136,5 +136,17 @@
         "date": 1763719458544
       }
     }
+  ],
+  "dev@ecom.test": [
+    {
+      "id": "d9c38265-a625-436f-bd32-61b2266e03ea",
+      "user": "dev@ecom.test",
+      "createdAt": 1764145611183
+    },
+    {
+      "id": "a14fc4dc-50ca-4ebe-ab21-ed32ad0ecd9e",
+      "user": "dev@ecom.test",
+      "createdAt": 1764145595136
+    }
   ]
 }

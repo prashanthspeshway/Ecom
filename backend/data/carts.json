@@ -30,6 +30,20 @@
     {
       "productId": "2",
       "quantity": 1
+    },
+    {
+      "productId": "e939f54a-0953-4450-aaef-cdfa4043615b",
+      "quantity": 1
+    }
+  ],
+  "dev@ecom.test": [
+    {
+      "productId": 18340,
+      "quantity": 2
+    },
+    {
+      "productId": "22484bfe-8241-4a85-8750-9f318d85de71",
+      "quantity": 2
     }
   ]
 }

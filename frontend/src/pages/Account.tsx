@@ -178,14 +178,16 @@ const WishlistContent = () => {
 };
 
 export default Account;
+type OrderItem = { image?: string; name: string; quantity: number };
+type OrderT = { id: string; createdAt?: number; items?: OrderItem[]; status?: string };
 const OrdersContent = () => {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderT[]>([]);
   useEffect(() => {
     (async () => {
       try {
         const res = await authFetch("/api/orders");
         if (res.ok) setOrders(await res.json());
-      } catch {}
+      } catch (e) { void e; }
     })();
   }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -200,7 +202,7 @@ const OrdersContent = () => {
         const data = await res.json().catch(() => ({}));
         setErrorMsg((data?.error as string) || "Order failed");
       }
-    } catch {}
+    } catch (e) { void e; }
   };
   if (!orders.length) {
     return (
@@ -228,7 +230,7 @@ const OrdersContent = () => {
                 <div className="text-sm text-muted-foreground">{new Date(o.createdAt || Date.now()).toLocaleDateString()}</div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(o.items || []).map((it: any, idx: number) => (
+                {(o.items || []).map((it: OrderItem, idx: number) => (
                   <a href={`/order/${o.id}`} key={String(idx)} className="flex items-center gap-3 border rounded-md p-2">
                     <img src={it.image || "/placeholder.svg"} alt="p" className="w-16 h-16 rounded object-cover" />
                     <div>

@@ -44,7 +44,7 @@ const ProductDetail = () => {
         const res = await authFetch("/api/orders");
         if (!res.ok) { setCanReview(false); return; }
         const list = await res.json();
-        const ok = Array.isArray(list) && list.some((o: any) => (o.items || []).some((it: any) => it.productId === id));
+        const ok = Array.isArray(list) && list.some((o: { items?: { productId?: string }[] }) => (o.items || []).some((it) => it.productId === id));
         setCanReview(ok);
       } catch { setCanReview(false); }
     })();
@@ -347,7 +347,7 @@ const ProductDetail = () => {
                       qc.invalidateQueries({ queryKey: ["product", id] });
                       qc.refetchQueries({ queryKey: ["product", id] });
                     }
-                  } catch {}
+                  } catch (e) { void e; }
                 }}>Submit Review</Button>
               </div>
             ) : null}

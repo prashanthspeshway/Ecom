@@ -15,8 +15,8 @@ const Orders = () => {
         const res = await authFetch("/api/orders");
         if (!res.ok) throw new Error(String(res.status));
         setOrders(await res.json());
-      } catch (e: any) {
-        const code = Number(e?.message || 0);
+      } catch (e) {
+        const code = Number((e as Error)?.message || 0);
         if (code === 401) {
           document.body.setAttribute("data-orders-error", "Login to view your orders");
         }

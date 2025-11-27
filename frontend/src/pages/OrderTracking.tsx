@@ -11,7 +11,8 @@ import { authFetch, getRole } from "@/lib/auth";
 
 type ProgressT = { placed?: number; dispatched?: number; shipped?: number; delivered?: number };
 type Item = { productId: string; name: string; image?: string; quantity: number; price?: number; progress?: ProgressT };
-type Order = { id: string; user?: string; items: Item[]; status: string; createdAt: number; shipping?: any };
+type Shipping = { first?: string; last?: string; email?: string; phone?: string; address?: string | { line1?: string; line2?: string }; city?: string; state?: string; pincode?: string; postalCode?: string } | null;
+type Order = { id: string; user?: string; items: Item[]; status: string; createdAt: number; shipping?: Shipping };
 
 const stages = ["placed", "dispatched", "in_transit", "shipped", "out_for_delivery", "delivered"] as const;
 
@@ -28,8 +29,8 @@ const OrderTracking = () => {
         const res = await authFetch(url);
         if (!res.ok) throw new Error(String(res.status));
         setOrder(await res.json());
-      } catch (e: any) {
-        const code = Number(e?.message || 0);
+      } catch (e) {
+        const code = Number((e as Error)?.message || 0);
         if (code === 401) setError("Login required to view this order");
         else if (code === 404) setError("Order not found");
         else setError("Unable to load order");
@@ -88,7 +89,7 @@ const OrderTracking = () => {
         <div className="border rounded-lg p-4 mb-6">
           <div className="font-medium mb-2">Shipping Details</div>
           {(() => {
-            const s: any = order.shipping || {};
+            const s = (order.shipping || {}) as NonNullable<Shipping>;
             const name = [s.first, s.last].filter(Boolean).join(" ");
             const addr = typeof s.address === "string" ? s.address : [s.address?.line1, s.address?.line2].filter(Boolean).join(", ");
             const cityState = [s.city, s.state].filter(Boolean).join(", ");

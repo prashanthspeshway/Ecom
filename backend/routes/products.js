@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, adminOnly, getProducts, setProducts, saveProducts, getCategories, saveCategories, getSubcategories }) {
+export default function register({ app, getDb, authMiddleware, adminOnly, getProducts, setProducts, saveProducts, getCategories, saveCategories, getSubcategories, getOrders }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
@@ -131,6 +131,35 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: "Delete failed" });
+    }
+  });
+
+  router.post("/:id/reviews", authMiddleware, async (req, res) => {
+    try {
+      const { rating, comment } = req.body || {};
+      const id = req.params.id;
+      const db = getDb();
+      if (db) {
+        const product = await db.collection("products").findOne({ id });
+        if (!product) return res.status(404).json({ error: "Not found" });
+        const review = { user: req.user.email, rating: Number(rating || 0), comment: comment || "", createdAt: Date.now() };
+        const reviews = Array.isArray(product.reviews) ? [...product.reviews, review] : [review];
+        const avg = reviews.length ? Math.round((reviews.reduce((a, b) => a + Number(b.rating || 0), 0) / reviews.length) * 10) / 10 : 0;
+        await db.collection("products").updateOne({ id }, { $set: { reviews, rating: avg } });
+        return res.json({ success: true });
+      }
+      const products = getProducts();
+      const idx = products.findIndex((p) => p.id === id);
+      if (idx === -1) return res.status(404).json({ error: "Not found" });
+      const review = { user: req.user.email, rating: Number(rating || 0), comment: comment || "", createdAt: Date.now() };
+      const reviews = Array.isArray(products[idx].reviews) ? [...products[idx].reviews, review] : [review];
+      const avg = reviews.length ? Math.round((reviews.reduce((a, b) => a + Number(b.rating || 0), 0) / reviews.length) * 10) / 10 : 0;
+      products[idx] = { ...products[idx], reviews, rating: avg };
+      setProducts(products);
+      saveProducts();
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed" });
     }
   });
 

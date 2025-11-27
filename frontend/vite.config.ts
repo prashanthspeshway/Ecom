@@ -14,7 +14,7 @@ export default defineConfig(async ({ mode }) => {
     try {
       const mod = await import("lovable-tagger");
       if (mod?.componentTagger) plugins.push(mod.componentTagger());
-    } catch {}
+    } catch (e) { void e; }
   }
   return {
     base,
@@ -25,12 +25,12 @@ export default defineConfig(async ({ mode }) => {
       hmr: false,
       proxy: {
         "/api": {
-          target: "http://localhost:3001",
+          target: "http://localhost:3002",
           changeOrigin: true,
           secure: false,
         },
         "/uploads": {
-          target: "http://localhost:3001",
+          target: "http://localhost:3002",
           changeOrigin: true,
           secure: false,
         },

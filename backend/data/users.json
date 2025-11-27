@@ -28,5 +28,23 @@
     "name": "User",
     "password": "$2a$10$RlO7913xk6bCOJVfMwca5uqidh5oxUTWzSLmlc7f0wHk7uJVdAhLq",
     "role": "user"
+  },
+  {
+    "email": "dev@ecom.test",
+    "name": "Dev User",
+    "password": "$2a$10$nAOcRyqNi6MHH859g1NHxeyxFCkvUMbKl.hw8IRVQ9GtMcFLNevQO",
+    "role": "user"
+  },
+  {
+    "email": "admin@test.io",
+    "name": "Admin",
+    "password": "$2a$10$eeESOGffiO1JKJktX4yA4etb.qrA/T7szZ1F/XMA4qq6xBjfyV9Ui",
+    "role": "admin"
+  },
+  {
+    "email": "admin2@example.com",
+    "name": "admin2",
+    "password": "$2a$10$Q2X0Za/xqOk8Fs3cEbIrx.KBAXjLTR4jAliixqGhLWc8Lv.uRBs0q",
+    "role": "admin"
   }
 ]
