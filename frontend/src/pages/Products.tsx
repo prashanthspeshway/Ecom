@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { apiBase } from "@/lib/auth";
 
 function FiltersPanel({
   priceRange,
@@ -35,6 +36,14 @@ function FiltersPanel({
   selectedCategories: string[];
   setSelectedCategories: (v: string[]) => void;
 }) {
+  const { data: categories = [] } = useQuery<string[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/categories`);
+      return res.json();
+    },
+  });
+
   return (
     <div className="space-y-8">
       <div>
@@ -48,7 +57,7 @@ function FiltersPanel({
       <div>
         <h3 className="font-semibold mb-4">Category</h3>
         <div className="space-y-3">
-          {["Silk Sarees", "Banarasi", "Kanjeevaram", "Cotton", "Designer", "Lenin"].map((category) => (
+          {categories.map((category) => (
             <div key={category} className="flex items-center space-x-2">
               <Checkbox
                 id={category}
@@ -65,19 +74,6 @@ function FiltersPanel({
           ))}
         </div>
       </div>
-      <div>
-        <h3 className="font-semibold mb-4">Occasion</h3>
-        <div className="space-y-3">
-          {["Wedding", "Festival", "Party", "Casual"].map((occasion) => (
-            <div key={occasion} className="flex items-center space-x-2">
-              <Checkbox id={occasion} />
-              <label htmlFor={occasion} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {occasion}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -85,15 +81,26 @@ function FiltersPanel({
 const Products = () => {
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const { data } = useQuery<Product[]>({ queryKey: ["products"], queryFn: getProducts });
   const location = useLocation();
-  const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const categoryParam = useMemo(() => new URLSearchParams(location.search).get("category"), [location.search]);
+  const isNew = categoryParam === "new";
+  const isSale = categoryParam === "sale";
+  const isBestSeller = categoryParam === "bestsellers";
+  
+  const { data } = useQuery<Product[]>({ 
+    queryKey: ["products", { new: isNew, sale: isSale, bestseller: isBestSeller }], 
+    queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }) 
+  });
+  
+  const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   const products = useMemo(() => {
     const list = (data || []).filter((p) => {
       const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
       const matchesCategoryParam = (() => {
+        if (isNew) return true;
+        if (isSale) return !!p.onSale;
+        if (isBestSeller) return !!p.isBestSeller;
         if (subParam) return p.category.toLowerCase().includes(subParam.toLowerCase());
         if (categoryParam) return p.category.toLowerCase().includes(categoryParam.toLowerCase());
         return true;
@@ -107,10 +114,19 @@ const Products = () => {
     return list;
   }, [data, query, categoryParam, subParam, selectedCategories, priceRange]);
 
+  const title = useMemo(() => {
+    if (isNew) return "New Arrivals";
+    if (isSale) return "Sale";
+    if (isBestSeller) return "Best Sellers";
+    if (categoryParam && categoryParam !== "lenin") return categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
+    if (categoryParam === "lenin") return "Lenin Collection"; 
+    return "Shop Sarees";
+  }, [isNew, isSale, isBestSeller, categoryParam]);
+
   return (
     <div className="container px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-3xl md:text-4xl font-bold">Shop Sarees</h1>
+        <h1 className="font-serif text-3xl md:text-4xl font-bold">{title}</h1>
         <div className="flex items-center gap-4">
           <Select defaultValue="popularity">
             <SelectTrigger className="w-[180px]">
@@ -118,7 +134,6 @@ const Products = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="popularity">Popularity</SelectItem>
-              <SelectItem value="new">New Arrivals</SelectItem>
               <SelectItem value="price-low">Price: Low to High</SelectItem>
               <SelectItem value="price-high">Price: High to Low</SelectItem>
             </SelectContent>

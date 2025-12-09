@@ -7,8 +7,13 @@ export async function fetchJSON(url: string) {
   return res.json();
 }
 
-export function getProducts() {
-  return fetchJSON("/api/products");
+export function getProducts(opts?: { new?: boolean; sale?: boolean; bestseller?: boolean }) {
+  const params = new URLSearchParams();
+  if (opts?.new) params.append("new", "true");
+  if (opts?.sale) params.append("sale", "true");
+  if (opts?.bestseller) params.append("bestseller", "true");
+  const str = params.toString();
+  return fetchJSON(str ? `/api/products?${str}` : "/api/products");
 }
 
 export function getProduct(id: string) {

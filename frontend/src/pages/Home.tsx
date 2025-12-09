@@ -19,9 +19,9 @@ const Home = () => {
     },
   });
   const { data: bestsellers = [] } = useQueryRQ<Product[]>({
-    queryKey: ["bestsellers"],
+    queryKey: ["curated-bestsellers"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/bestsellers`, { headers: {} });
+      const res = await fetch(`${apiBase}/api/bestsellers`);
       return res.json();
     },
   });
@@ -66,7 +66,7 @@ const Home = () => {
           <div className="container px-4">
             <div className="flex items-center justify-between mb-8">
               <h2 className="font-serif text-3xl md:text-4xl font-bold">Bestsellers</h2>
-              <Link to="/products">
+              <Link to="/products?category=bestsellers">
                 <Button variant="outline">View All</Button>
               </Link>
             </div>

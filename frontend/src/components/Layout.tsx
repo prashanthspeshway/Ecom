@@ -110,11 +110,11 @@ const Layout = ({ children }: LayoutProps) => {
                   <Link to="/products" className="text-lg font-medium hover:text-primary">
                     Shop
                   </Link>
-                  <Link to="/products?category=new" className="text-lg font-medium hover:text-primary">
-                    New Arrivals
-                  </Link>
                   <Link to="/products?category=sale" className="text-lg font-medium hover:text-primary">
                     Sale
+                  </Link>
+                  <Link to="/products?category=bestsellers" className="text-lg font-medium hover:text-primary">
+                    Best Sellers
                   </Link>
                 </nav>
               </SheetContent>
@@ -131,11 +131,11 @@ const Layout = ({ children }: LayoutProps) => {
                 <Link to="/products" className="text-sm font-medium hover:text-primary transition-colors">
                   Shop
                 </Link>
-                <Link to="/products?category=new" className="text-sm font-medium hover:text-primary transition-colors">
-                  New Arrivals
-                </Link>
                 <Link to="/products?category=sale" className="text-sm font-medium hover:text-primary transition-colors">
                   Sale
+                </Link>
+                <Link to="/products?category=bestsellers" className="text-sm font-medium hover:text-primary transition-colors">
+                  Best Sellers
                 </Link>
               </nav>
             )}

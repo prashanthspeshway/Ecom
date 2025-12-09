@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AdminBestSellersDialog } from "@/components/AdminBestSellersDialog";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -65,8 +66,8 @@ const Admin = () => {
 
   
 
-  const initialForm = { name: "", price: "", originalPrice: "", saveAmount: "", images: "", stock: "", category: "", discount: "" };
-  const [form, setForm] = useState<{ name: string; price: string; originalPrice: string; saveAmount: string; images: string; stock: string; category: string; discount: string }>({
+  const initialForm = { name: "", price: "", originalPrice: "", saveAmount: "", images: "", stock: "", category: "", discount: "", onSale: false };
+  const [form, setForm] = useState<{ name: string; price: string; originalPrice: string; saveAmount: string; images: string; stock: string; category: string; discount: string; onSale: boolean }>({
     name: "",
     price: "",
     originalPrice: "",
@@ -75,6 +76,7 @@ const Admin = () => {
     stock: "",
     category: "",
     discount: "",
+    onSale: false,
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null]);
@@ -291,109 +293,6 @@ const Admin = () => {
 
   const [adminSearchTerm, setAdminSearchTerm] = useState("");
 
-  function BestSellersManager({ products }: { products: Product[] }) {
-    const qc = useQueryClient();
-    const { data: current = [] } = useQuery<Product[]>({
-      queryKey: ["bestsellers"],
-      queryFn: async () => {
-        const res = await authFetch("/api/bestsellers");
-        return res.json();
-      },
-    });
-    const [slotIds, setSlotIds] = useState<string[]>(["", "", "", "", ""]);
-    useEffect(() => {
-      const ids = current.map((p) => p.id);
-      setSlotIds((["", "", "", "", ""]).map((_, i) => ids[i] || ""));
-    }, [current]);
-    const saveListMutation = useMutation({
-      mutationFn: async (ids: string[]) => {
-        const res = await authFetch("/api/bestsellers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids }),
-        });
-        if (!res.ok) throw new Error("Save failed");
-        return res.json();
-      },
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["bestsellers"] });
-        qc.refetchQueries({ queryKey: ["bestsellers"] });
-        toast("Bestsellers updated");
-      },
-    });
-    const delMutation = useMutation({
-      mutationFn: async (id: string) => {
-        const res = await authFetch(`/api/bestsellers/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Delete failed");
-        return res.json();
-      },
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["bestsellers"] });
-        qc.refetchQueries({ queryKey: ["bestsellers"] });
-      },
-    });
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[0,1,2,3,4].map((idx) => {
-            const pid = slotIds[idx] || "";
-            const p = pid ? current.find((x) => x.id === pid) : undefined;
-            return (
-              <div key={`slot-${idx}`}>
-                <div className="flex gap-2 items-center mb-2">
-                  <select
-                    className="border rounded-md px-2 py-1 bg-background w-full"
-                    value={pid}
-                    onChange={(e) => setSlotIds((ids) => { const ni = [...ids]; ni[idx] = e.target.value; return ni; })}
-                  >
-                    <option value="">Select product</option>
-                    {products.map((pp) => (
-                      <option key={pp.id} value={pp.id}>{pp.name}</option>
-                    ))}
-                  </select>
-                  <Button
-                    onClick={() => {
-                      const arr = slotIds.map((x) => x).filter(Boolean);
-                      saveListMutation.mutate(arr);
-                    }}
-                    disabled={!slotIds[idx]}
-                  >Add</Button>
-                </div>
-                {p ? (
-                  <>
-                    <ProductCard product={p} compact />
-                    <div className="mt-2 flex justify-end">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSlotIds((ids) => { const ni = [...ids]; ni[idx] = ""; return ni; });
-                          const arr = slotIds.map((x, i) => (i === idx ? "" : x)).filter(Boolean);
-                          saveListMutation.mutate(arr);
-                        }}
-                      >Remove</Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center">
-                    <button
-                      type="button"
-                      className="h-12 w-12 rounded-full border bg-background flex items-center justify-center"
-                      onClick={() => slotIds[idx] && saveListMutation.mutate(slotIds.filter(Boolean))}
-                      disabled={!slotIds[idx]}
-                    >
-                      <Plus className="h-6 w-6" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
   function CategoryTilesManager({ categories }: { categories: string[] }) {
     const qc = useQueryClient();
     type CategoryTile = { category: string; image: string; position: number };
@@ -608,6 +507,16 @@ const Admin = () => {
               <Label>Save Amount</Label>
               <Input type="number" value={form.saveAmount} onChange={(e) => setForm({ ...form, saveAmount: e.target.value })} />
             </div>
+            <div className="flex items-center gap-2 mt-6">
+              <input 
+                type="checkbox" 
+                id="onSale"
+                checked={form.onSale} 
+                onChange={(e) => setForm({ ...form, onSale: e.target.checked })} 
+                className="w-4 h-4"
+              />
+              <Label htmlFor="onSale">On Sale</Label>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {form.originalPrice && (
@@ -796,6 +705,7 @@ const Admin = () => {
                 saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
                 discount: form.discount ? Number(form.discount) : undefined,
                 colorLinks: finalColorLinks,
+                onSale: form.onSale,
               });
               setForm(initialForm);
               setSelectedSub("");
@@ -1098,8 +1008,9 @@ const Admin = () => {
         </div>
         
       <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
-        <h2 className="font-serif text-2xl font-bold">Best Sellers</h2>
-        <BestSellersManager products={products} />
+        <div>
+          <AdminBestSellersDialog />
+        </div>
       </div>
       <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
         <h2 className="font-serif text-2xl font-bold">Category Tiles</h2>

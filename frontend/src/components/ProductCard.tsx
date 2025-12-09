@@ -26,6 +26,11 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
+          {product.onSale && (
+            <Badge className="absolute bottom-3 right-3 bg-red-600 text-white z-10">
+              SALE
+            </Badge>
+          )}
           {product.discount && (
             <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground">
               {product.discount}% OFF
