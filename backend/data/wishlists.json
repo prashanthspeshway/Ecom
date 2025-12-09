@@ -3,5 +3,8 @@
     {
       "productId": "2"
     }
+  ],
+  "admin@example.com": [
+    "2"
   ]
 }

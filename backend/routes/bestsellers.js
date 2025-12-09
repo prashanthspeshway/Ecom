@@ -12,11 +12,13 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getBes
         if (docs.length === 1 && Array.isArray(docs[0]?.ids)) ids = docs[0].ids; else ids = docs.map((d) => d.id).filter(Boolean);
         if (!ids.length) return res.json([]);
         const list = await db.collection("products").find({ id: { $in: ids } }).toArray();
-        return res.json(list);
+        const ordered = ids.map(id => list.find(p => p.id === id)).filter(Boolean);
+        return res.json(ordered);
       }
       const ids = getBestsellers();
       const list = (getProducts() || []).filter((p) => ids.includes(p.id));
-      res.json(list);
+      const ordered = ids.map(id => list.find(p => p.id === id)).filter(Boolean);
+      res.json(ordered);
     } catch (e) {
       res.status(500).json({ error: "Failed" });
     }

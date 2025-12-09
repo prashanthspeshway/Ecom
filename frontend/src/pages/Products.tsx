@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { Filter, X } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { useQuery } from "@tanstack/react-query";
@@ -92,6 +92,22 @@ const Products = () => {
     queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }) 
   });
   
+  const { data: apiSubcategories = [] } = useQuery<string[]>({
+    queryKey: ["subcategories", categoryParam],
+    queryFn: async () => {
+      if (!categoryParam) return [];
+      const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(categoryParam)}`);
+      return res.json();
+    },
+    enabled: !!categoryParam
+  });
+
+  const displaySubcategories = useMemo(() => {
+    if (apiSubcategories.length > 0) return apiSubcategories;
+    if (categoryParam?.toLowerCase() === 'lenin') return leninSubcategories.map(s => s.name);
+    return [];
+  }, [apiSubcategories, categoryParam]);
+
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   const products = useMemo(() => {
@@ -204,19 +220,16 @@ const Products = () => {
         </div>
       )}
 
-      {categoryParam?.toLowerCase() === "lenin" && (
+      {displaySubcategories.length > 0 && (
         <div className="mb-8">
-          <h2 className="font-serif text-2xl font-bold mb-4">Explore Lenin Collections</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {leninSubcategories.map((sub) => (
-              <a key={sub.name} href={`/products?category=lenin&sub=${encodeURIComponent(sub.name.toLowerCase())}`} className="group">
-                <div className="rounded-lg bg-card p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors border">
-                  {sub.image ? (
-                    <img src={sub.image} alt={sub.name} className="w-12 h-12 rounded object-cover" />
-                  ) : null}
-                  <span className="font-medium text-sm truncate">{sub.name}</span>
-                </div>
-              </a>
+          <h2 className="font-serif text-2xl font-bold mb-4">Explore Collection</h2>
+          <div className="flex flex-wrap gap-3">
+            {displaySubcategories.map((sub) => (
+              <Link key={sub} to={`/products?category=${encodeURIComponent(categoryParam || "")}&sub=${encodeURIComponent(sub.toLowerCase())}`}>
+                <Button variant="outline" className="rounded-full hover:bg-primary hover:text-primary-foreground transition-colors">
+                  {sub}
+                </Button>
+              </Link>
             ))}
           </div>
         </div>

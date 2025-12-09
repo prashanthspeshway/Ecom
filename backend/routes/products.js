@@ -7,16 +7,42 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
+      const isNew = req.query.new === "true";
+      const isSale = req.query.sale === "true";
+      const isBestSeller = req.query.bestseller === "true";
+
       if (db) {
-        const items = await db.collection("products").find({}).sort({ createdAt: -1, _id: -1 }).toArray();
+        let query = {};
+        if (isSale) query.onSale = true;
+        if (isBestSeller) query.isBestSeller = true;
+        
+        let cursor = db.collection("products").find(query).sort({ createdAt: -1, _id: -1 });
+        if (isNew) cursor = cursor.limit(50);
+        
+        const items = await cursor.toArray();
         const sanitized = items.map((p) => ({ ...p, images: Array.isArray(p.images) ? p.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] }));
         return res.json(sanitized);
       }
+      
       const products = getProducts();
-      const sorted = [...products]
+      let filtered = [...products];
+      
+      if (isSale) {
+        filtered = filtered.filter(p => p.onSale === true);
+      }
+      if (isBestSeller) {
+        filtered = filtered.filter(p => p.isBestSeller === true);
+      }
+      
+      const sorted = filtered
         .map((p) => ({ ...p, images: Array.isArray(p.images) ? p.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] }))
         .sort((a, b) => (Number(b.createdAt || 0) - Number(a.createdAt || 0)));
-      res.json(sorted);
+        
+      if (isNew) {
+        res.json(sorted.slice(0, 50));
+      } else {
+        res.json(sorted);
+      }
     } catch (e) {
       res.status(500).json({ error: "Database error" });
     }
@@ -64,6 +90,8 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
         reviews: [],
         category: payload.category || "",
         occasion: payload.occasion || "",
+        onSale: Boolean(payload.onSale),
+        isBestSeller: Boolean(payload.isBestSeller),
         createdAt: Date.now(),
       };
       const db = getDb();

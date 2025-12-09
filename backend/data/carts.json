@@ -24,6 +24,10 @@
     {
       "productId": "3",
       "quantity": 1
+    },
+    {
+      "productId": "2",
+      "quantity": 1
     }
   ],
   "user2@gmail.com": [

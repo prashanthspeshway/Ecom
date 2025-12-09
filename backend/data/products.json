@@ -48,7 +48,8 @@
       }
     ],
     "category": "Silk Sarees",
-    "occasion": "Wedding"
+    "occasion": "Wedding",
+    "isBestSeller": false
   },
   {
     "id": "2",
@@ -88,7 +89,9 @@
       }
     ],
     "category": "Banarasi Sarees",
-    "occasion": "Festival"
+    "occasion": "Festival",
+    "isBestSeller": true,
+    "onSale": false
   },
   {
     "id": "3",
@@ -117,7 +120,8 @@
     "rating": 4.7,
     "reviews": [],
     "category": "Silk Sarees",
-    "occasion": "Party"
+    "occasion": "Party",
+    "isBestSeller": false
   },
   {
     "id": "4",
@@ -179,7 +183,9 @@
     "rating": 0,
     "reviews": [],
     "category": "",
-    "occasion": ""
+    "occasion": "",
+    "onSale": false,
+    "isBestSeller": true
   },
   {
     "id": "f6fb2462-d517-45a6-a615-84123b04e398",
@@ -309,7 +315,9 @@
     ],
     "category": "Lenin Ikkat",
     "occasion": "",
-    "createdAt": 1763628129369
+    "createdAt": 1763628129369,
+    "onSale": true,
+    "isBestSeller": false
   },
   {
     "id": "22484bfe-8241-4a85-8750-9f318d85de71",
@@ -337,6 +345,8 @@
     "reviews": [],
     "category": "Lenin Ikkat",
     "occasion": "",
-    "createdAt": 1763972664560
+    "createdAt": 1763972664560,
+    "isBestSeller": false,
+    "onSale": false
   }
 ]
