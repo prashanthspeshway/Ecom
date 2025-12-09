@@ -45,7 +45,7 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/pages" element={<AdminPages />} />
+          <Route path="/admin/support" element={<AdminPages />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/order/:id" element={<OrderTracking />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

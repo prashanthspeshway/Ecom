@@ -188,15 +188,13 @@ const Layout = ({ children }: LayoutProps) => {
                 <Link to="/admin/orders">
                   <Button variant="ghost" className="relative">
                     Orders
-                    {adminOrdersCount > 0 ? (
-                      <span className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] px-1 flex items-center justify-center">
-                        {adminOrdersCount}
-                      </span>
-                    ) : null}
+                    {adminOrdersCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+                    )}
                   </Button>
                 </Link>
-                <Link to="/admin/pages">
-                  <Button variant="ghost">Pages</Button>
+                <Link to="/admin/support">
+                  <Button variant="ghost">Support</Button>
                 </Link>
               </>
             )}

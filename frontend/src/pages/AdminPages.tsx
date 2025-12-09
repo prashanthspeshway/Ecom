@@ -152,7 +152,7 @@ export default function AdminPages() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold font-serif">Manage Pages</h1>
+        <h1 className="text-3xl font-bold font-serif">Support Pages</h1>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Add Page</Button>
