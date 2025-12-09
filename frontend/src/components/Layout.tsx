@@ -249,7 +249,7 @@ const Layout = ({ children }: LayoutProps) => {
 
       <footer className="border-t bg-card">
         <div className="container px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <h3 className="font-serif text-lg font-semibold mb-4">Saree Elegance</h3>
               <p className="text-sm text-muted-foreground">

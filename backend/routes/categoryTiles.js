@@ -8,14 +8,18 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getCat
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
+      let useDb = false;
       if (db) {
-        const list = await db.collection("category_tiles").find({}).sort({ position: 1 }).limit(6).toArray();
+        const count = await db.collection("category_tiles").countDocuments();
+        if (count > 0) useDb = true;
+      }
+      if (useDb) {
+        const list = await db.collection("category_tiles").find({}).sort({ position: 1 }).toArray();
         return res.json(list.map((x) => ({ category: x.category, image: x.image, position: Number(x.position || 0) })));
       }
       const entries = Object.entries(getCategoryTiles())
         .map(([pos, obj]) => ({ position: Number(pos), category: obj?.category || "", image: obj?.image || "" }))
         .sort((a, b) => a.position - b.position)
-        .slice(0, 6)
         .map((e) => {
           try {
             if (e.image && e.image.startsWith("/uploads/")) {
@@ -39,19 +43,26 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getCat
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
+      console.log("CategoryTiles POST", req.body);
       const { category, image, position } = req.body || {};
-      if (!category || !image || position === undefined) return res.status(400).json({ error: "category, image, position required" });
+      if (!category || !image || position === undefined) {
+        console.error("Missing fields", { category, image, position });
+        return res.status(400).json({ error: "category, image, position required" });
+      }
       const db = getDb();
       if (db) {
         await db.collection("category_tiles").updateOne({ position: Number(position) }, { $set: { category, image, position: Number(position) } }, { upsert: true });
+        console.log("DB Update success");
         return res.json({ success: true });
       }
       const tiles = getCategoryTiles();
       tiles[String(position)] = { category, image };
       setCategoryTiles(tiles);
       saveCategoryTiles();
+      console.log("File Update success");
       res.json({ success: true });
     } catch (e) {
+      console.error("CategoryTiles POST Error", e);
       res.status(500).json({ error: "Failed" });
     }
   });

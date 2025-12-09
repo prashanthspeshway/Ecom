@@ -111,6 +111,78 @@ const Admin = () => {
     return (categoriesData || []).filter((c) => !allSubs.has(c));
   })();
 
+  const handleCreateProduct = async () => {
+    let thumbUrl: string | null = null;
+    if (thumbnailFile) {
+      const tfd = new FormData();
+      tfd.append("files", thumbnailFile);
+      const tres = await authFetch("/api/upload", { method: "POST", body: tfd });
+      const tdata = await tres.json();
+      thumbUrl = (tdata.urls || [])[0] || null;
+    }
+    let uploaded: string[] = [];
+    const selected = files.filter(Boolean) as File[];
+    if (selected.length) {
+      const fd = new FormData();
+      selected.forEach((f) => fd.append("files", f));
+      const res = await authFetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      uploaded = data.urls || [];
+    }
+    const thumbInputUrl = form.images.trim();
+    const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
+    const urls = [] as string[];
+    const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
+    // prepare colorLinks from editor state
+    const colorLinks = colorItems
+      .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
+      .filter((ci) => ci.file || ci.imageUrl);
+    const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!)
+    let uploadedColorUrls: string[] = [];
+    if (filesToUpload.length) {
+      const cfd = new FormData();
+      filesToUpload.forEach((f) => cfd.append("files", f));
+      const cres = await authFetch("/api/upload", { method: "POST", body: cfd });
+      const cdata = await cres.json();
+      uploadedColorUrls = cdata.urls || [];
+    }
+    let colorUrlIndex = 0;
+    const finalColorLinks = colorLinks.map((ci) => ({
+      image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
+      url: ci.url,
+    })).filter((x) => x.image && x.url);
+
+    await createMutation.mutateAsync({
+      name: form.name,
+      price: Number(form.price),
+      images: imagesArray,
+      stock: Number(form.stock || 0),
+      category: selectedSub || form.category,
+      originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
+      saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
+      discount: form.discount ? Number(form.discount) : undefined,
+      colorLinks: finalColorLinks,
+      onSale: form.onSale,
+    });
+    setForm(initialForm);
+    setSelectedSub("");
+    setThumbnailFile(null);
+    setFiles([null, null, null, null, null]);
+    setSelectedPreviewIndex(0);
+    setFilePickerIndex(null);
+    setColorItems([]);
+    const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
+    if (thumbEl) thumbEl.value = "";
+    const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
+    if (multiEl) multiEl.value = "";
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+        handleCreateProduct();
+    }
+  };
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmData, setConfirmData] = useState<
     | { type: "category"; name: string }
@@ -450,6 +522,7 @@ const Admin = () => {
               placeholder="Target URL"
               value={ci.url}
               onChange={(e) => setColorItems((items) => items.map((it, i) => i === idx ? { ...it, url: e.target.value } : it))}
+              onKeyDown={handleKeyDown}
             />
             <div>
               <Button variant="destructive" size="sm" onClick={() => setColorItems((items) => items.filter((_, i) => i !== idx))}>Remove</Button>
@@ -487,25 +560,25 @@ const Admin = () => {
           <h2 className="font-serif text-2xl font-bold">Add Product</h2>
           <div>
             <Label>Name</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} onKeyDown={handleKeyDown} />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
               <Label>Price</Label>
-              <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+              <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} onKeyDown={handleKeyDown} />
             </div>
             <div>
               <Label>Discount (%)</Label>
-              <Input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} />
+              <Input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} onKeyDown={handleKeyDown} />
             </div>
             <div>
               <Label>Cutoff</Label>
-              <Input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} />
+              <Input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} onKeyDown={handleKeyDown} />
             </div>
             <div>
               <Label>Save Amount</Label>
-              <Input type="number" value={form.saveAmount} onChange={(e) => setForm({ ...form, saveAmount: e.target.value })} />
+              <Input type="number" value={form.saveAmount} onChange={(e) => setForm({ ...form, saveAmount: e.target.value })} onKeyDown={handleKeyDown} />
             </div>
             <div className="flex items-center gap-2 mt-6">
               <input 
@@ -618,7 +691,7 @@ const Admin = () => {
           </div>
           <div>
             <Label>Stock</Label>
-            <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
+            <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} onKeyDown={handleKeyDown} />
           </div>
           <div>
             <Label>Category</Label>
@@ -654,71 +727,7 @@ const Admin = () => {
             </div>
           </div>
           <Button
-            onClick={async () => {
-              let thumbUrl: string | null = null;
-              if (thumbnailFile) {
-                const tfd = new FormData();
-                tfd.append("files", thumbnailFile);
-                const tres = await authFetch("/api/upload", { method: "POST", body: tfd });
-                const tdata = await tres.json();
-                thumbUrl = (tdata.urls || [])[0] || null;
-              }
-              let uploaded: string[] = [];
-              const selected = files.filter(Boolean) as File[];
-              if (selected.length) {
-                const fd = new FormData();
-                selected.forEach((f) => fd.append("files", f));
-                const res = await authFetch("/api/upload", { method: "POST", body: fd });
-                const data = await res.json();
-                uploaded = data.urls || [];
-              }
-              const thumbInputUrl = form.images.trim();
-              const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
-              const urls = [] as string[];
-              const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
-              // prepare colorLinks from editor state
-              const colorLinks = colorItems
-                .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
-                .filter((ci) => ci.file || ci.imageUrl);
-              const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!)
-              let uploadedColorUrls: string[] = [];
-              if (filesToUpload.length) {
-                const cfd = new FormData();
-                filesToUpload.forEach((f) => cfd.append("files", f));
-                const cres = await authFetch("/api/upload", { method: "POST", body: cfd });
-                const cdata = await cres.json();
-                uploadedColorUrls = cdata.urls || [];
-              }
-              let colorUrlIndex = 0;
-              const finalColorLinks = colorLinks.map((ci) => ({
-                image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
-                url: ci.url,
-              })).filter((x) => x.image && x.url);
-
-              await createMutation.mutateAsync({
-                name: form.name,
-                price: Number(form.price),
-                images: imagesArray,
-                stock: Number(form.stock || 0),
-                category: selectedSub || form.category,
-                originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
-                saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
-                discount: form.discount ? Number(form.discount) : undefined,
-                colorLinks: finalColorLinks,
-                onSale: form.onSale,
-              });
-              setForm(initialForm);
-              setSelectedSub("");
-              setThumbnailFile(null);
-              setFiles([null, null, null, null, null]);
-              setSelectedPreviewIndex(0);
-              setFilePickerIndex(null);
-              setColorItems([]);
-              const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
-              if (thumbEl) thumbEl.value = "";
-              const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
-              if (multiEl) multiEl.value = "";
-            }}
+            onClick={handleCreateProduct}
           >
             Create
           </Button>
@@ -856,7 +865,18 @@ const Admin = () => {
           </div>
           {addingCategoryOpen && (
             <div className="flex gap-2">
-              <Input placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+              <Input 
+                placeholder="Category name" 
+                value={newCategoryName} 
+                onChange={(e) => setNewCategoryName(e.target.value)} 
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const name = newCategoryName.trim();
+                    if (!name) return;
+                    addCategoryMutation.mutate(name);
+                  }
+                }}
+              />
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -875,7 +895,21 @@ const Admin = () => {
                     <div className="flex w-full items-center justify-between">
                       {editingCategory === c ? (
                         <div className="flex items-center gap-2">
-                          <Input value={editingCategoryValue} onChange={(e) => setEditingCategoryValue(e.target.value)} className="h-8 w-48" />
+                          <Input 
+                            value={editingCategoryValue} 
+                            onChange={(e) => setEditingCategoryValue(e.target.value)} 
+                            className="h-8 w-48" 
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const v = editingCategoryValue.trim();
+                                if (!v || v === c) { setEditingCategory(null); return; }
+                                updateCategoryMutation.mutate({ oldName: c, newName: v });
+                                setEditingCategory(null);
+                              }
+                            }}
+                          />
                           <Button
                             size="sm"
                             onClick={(e) => {
@@ -944,7 +978,20 @@ const Admin = () => {
                   <AccordionContent className="px-3">
                     {addingSubFor === c && (
                       <div className="flex gap-2 mb-2">
-                        <Input id={`new-sub-input-${c}`} placeholder="New subcategory" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} className="h-8" />
+                        <Input 
+                          id={`new-sub-input-${c}`} 
+                          placeholder="New subcategory" 
+                          value={newSubName} 
+                          onChange={(e) => setNewSubName(e.target.value)} 
+                          className="h-8" 
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const name = newSubName.trim();
+                              if (!name) return;
+                              addSubMutation.mutate({ category: c, name });
+                            }
+                          }}
+                        />
                         <Button
                           size="sm"
                           variant="secondary"
@@ -962,7 +1009,19 @@ const Admin = () => {
                         <span key={s} className="text-xs rounded-md border px-2 py-1 flex items-center gap-1">
                           {editingSub && editingSub.category === c && editingSub.name === s ? (
                             <>
-                              <Input value={editingSubValue} onChange={(e) => setEditingSubValue(e.target.value)} className="h-7 w-40 text-xs" />
+                              <Input 
+                                value={editingSubValue} 
+                                onChange={(e) => setEditingSubValue(e.target.value)} 
+                                className="h-7 w-40 text-xs" 
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    const v = editingSubValue.trim();
+                                    if (!v || v === s) { setEditingSub(null); return; }
+                                    updateSubMutation.mutate({ category: c, oldName: s, newName: v });
+                                    setEditingSub(null);
+                                  }
+                                }}
+                              />
                               <Button
                                 size="sm"
                                 className="h-7 px-2"

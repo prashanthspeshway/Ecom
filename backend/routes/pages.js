@@ -1,17 +1,38 @@
 import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const pagesPath = path.join(__dirname, "..", "data", "pages.json");
 
 export default function register({ app, getDb, authMiddleware, adminOnly, getPages, setPages, savePages }) {
   const router = express.Router();
+
+  const getPagesFromFile = () => {
+    try {
+        const raw = fs.readFileSync(pagesPath, "utf-8");
+        return JSON.parse(raw);
+    } catch (e) {
+        return [];
+    }
+  };
 
   // Get all pages (public, but mostly for admin list or navigation)
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
       if (db) {
-        const pages = await db.collection("pages").find({}).toArray();
+        let pages = await db.collection("pages").find({}).toArray();
+        if (pages.length === 0) {
+            // Fallback to file data if DB is empty
+            return res.json(getPagesFromFile());
+        }
         return res.json(pages);
       }
-      return res.json(getPages());
+      // Prefer reading from file to get latest manual changes without restart
+      return res.json(getPagesFromFile());
     } catch (e) {
       res.status(500).json({ error: "Failed" });
     }
@@ -27,7 +48,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
         if (!page) return res.status(404).json({ error: "Page not found" });
         return res.json(page);
       }
-      const pages = getPages();
+      const pages = getPagesFromFile();
       const page = pages.find(p => p.slug === slug);
       if (!page) return res.status(404).json({ error: "Page not found" });
       return res.json(page);
@@ -58,7 +79,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
         return res.json({ success: true });
       }
 
-      const pages = getPages();
+      const pages = getPagesFromFile();
       if (pages.find(p => p.slug === slug)) {
         return res.status(400).json({ error: "Slug already exists" });
       }
@@ -72,7 +93,10 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
         updatedAt: new Date()
       });
       setPages(pages);
-      savePages();
+      // Manually save to ensure consistency if savePages relies on stale closure? 
+      // Actually setPages updates the reference, so savePages should work if it uses the same variable.
+      // But to be absolutely safe:
+      fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2));
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: "Failed" });
@@ -105,7 +129,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
         return res.json({ success: true });
       }
 
-      const pages = getPages();
+      const pages = getPagesFromFile();
       const index = pages.findIndex(p => p.slug === slug);
       if (index === -1) return res.status(404).json({ error: "Page not found" });
 
@@ -121,7 +145,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
       pages[index].updatedAt = new Date();
 
       setPages(pages);
-      savePages();
+      fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2));
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: "Failed" });
@@ -139,14 +163,14 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
         return res.json({ success: true });
       }
 
-      let pages = getPages();
+      let pages = getPagesFromFile();
       const initialLength = pages.length;
       pages = pages.filter(p => p.slug !== slug);
       
       if (pages.length === initialLength) return res.status(404).json({ error: "Page not found" });
 
       setPages(pages);
-      savePages();
+      fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2));
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: "Failed" });

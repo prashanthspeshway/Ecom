@@ -25,12 +25,29 @@ export default defineConfig(async ({ mode }) => {
       hmr: false,
       proxy: {
         "/api": {
-          target: "http://localhost:3000",
+          target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
         },
         "/uploads": {
-          target: "http://localhost:3000",
+          target: "http://localhost:3001",
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+    },
+    preview: {
+      host: "::",
+      port: 8080,
+      allowedHosts: ["localhost", "127.0.0.1", "7114a8347d47.ngrok-free.app"],
+      proxy: {
+        "/api": {
+          target: "http://localhost:3001",
+          changeOrigin: true,
+          secure: false,
+        },
+        "/uploads": {
+          target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
         },

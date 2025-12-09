@@ -6,7 +6,13 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getCat
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
+      let useDb = false;
       if (db) {
+          const count = await db.collection("categories").estimatedDocumentCount();
+          if (count > 0) useDb = true;
+      }
+
+      if (useDb) {
         const cats = await db.collection("categories").find({}).toArray();
         const catNames = cats.map((c) => c.name);
         const subcats = await db.collection("subcategories").find({}).toArray();

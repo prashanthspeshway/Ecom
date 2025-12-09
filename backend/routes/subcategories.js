@@ -8,7 +8,13 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getSub
       const category = (req.query.category || "").toString();
       if (!category) return res.status(400).json({ error: "category required" });
       const db = getDb();
+      let useDb = false;
       if (db) {
+          const count = await db.collection("subcategories").estimatedDocumentCount();
+          if (count > 0) useDb = true;
+      }
+
+      if (useDb) {
         const list = await db.collection("subcategories").find({ category }).toArray();
         return res.json(list.map((s) => s.name));
       }

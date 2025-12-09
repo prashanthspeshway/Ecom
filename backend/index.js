@@ -180,13 +180,14 @@ async function initDb() {
     db = dbClient.db(dbName);
     const coll = db.collection("products");
     const count = await coll.countDocuments();
-    if (count === 0 && products.length > 0) {
-      await coll.insertMany(products);
-    }
+    // if (count === 0 && products.length > 0) {
+    //   await coll.insertMany(products);
+    // }
 
     const users = db.collection("users");
     try { await users.createIndex({ email: 1 }, { unique: true }); } catch {}
     // migrate file-based data to Mongo when collections are empty
+    /*
     try {
       const catColl = db.collection("categories");
       if (await catColl.countDocuments() === 0 && Array.isArray(categories) && categories.length) {
@@ -225,6 +226,7 @@ async function initDb() {
         await pagesColl.insertMany(pages);
       }
     } catch {}
+    */
   } catch (e) {
     db = null;
   }

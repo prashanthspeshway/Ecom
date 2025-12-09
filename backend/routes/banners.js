@@ -6,7 +6,12 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getBan
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
+      let useDb = false;
       if (db) {
+        const count = await db.collection("banners").countDocuments();
+        if (count > 0) useDb = true;
+      }
+      if (useDb) {
         const list = await db.collection("banners").find({}).toArray();
         return res.json(list.map((b) => b.url));
       }

@@ -137,6 +137,28 @@ const AdminProducts = () => {
   const [editOriginalPrice, setEditOriginalPrice] = useState<string>("");
   const [editSaveAmount, setEditSaveAmount] = useState<string>("");
 
+  const handleKeyDown = (e: React.KeyboardEvent, p: Product) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        updateMutation.mutate({
+            id: p.id,
+            payload: {
+                price: Number(edit.price),
+                stock: Number(edit.stock),
+                discount: edit.discount ? Number(edit.discount) : undefined,
+                name: editName,
+                category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
+                images: editImages,
+                originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
+                saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
+                onSale: edit.onSale,
+                isBestSeller: edit.isBestSeller,
+            },
+        });
+        setEditingId(null);
+    }
+  };
+
   return (
     <div className="container px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -271,30 +293,51 @@ const AdminProducts = () => {
               </div>
 
               {editingId === p.id && (
-                <div className="mt-4 grid sm:grid-cols-3 gap-4">
+                <form 
+                  className="mt-4 grid sm:grid-cols-3 gap-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    updateMutation.mutate({
+                      id: p.id,
+                      payload: {
+                        price: Number(edit.price),
+                        stock: Number(edit.stock),
+                        discount: edit.discount ? Number(edit.discount) : undefined,
+                        name: editName,
+                        category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
+                        images: editImages,
+                        originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
+                        saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
+                        onSale: edit.onSale,
+                        isBestSeller: edit.isBestSeller,
+                      },
+                    });
+                    setEditingId(null);
+                  }}
+                >
                   <div>
                     <Label>Price</Label>
-                    <Input type="number" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} />
+                    <Input type="number" step="0.01" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} onKeyDown={(e) => handleKeyDown(e, p)} />
                   </div>
                   <div>
                     <Label>Stock</Label>
-                    <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} />
+                    <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} onKeyDown={(e) => handleKeyDown(e, p)} />
                   </div>
                   <div>
                     <Label>Discount (%)</Label>
-                    <Input type="number" value={edit.discount} onChange={(e) => setEdit({ ...edit, discount: e.target.value })} />
+                    <Input type="number" value={edit.discount} onChange={(e) => setEdit({ ...edit, discount: e.target.value })} onKeyDown={(e) => handleKeyDown(e, p)} />
                   </div>
                   <div>
                     <Label>Cutoff</Label>
-                    <Input type="number" value={editOriginalPrice} onChange={(e) => setEditOriginalPrice(e.target.value)} />
+                    <Input type="number" value={editOriginalPrice} onChange={(e) => setEditOriginalPrice(e.target.value)} onKeyDown={(e) => handleKeyDown(e, p)} />
                   </div>
                   <div>
                     <Label>Save Amount</Label>
-                    <Input type="number" value={editSaveAmount} onChange={(e) => setEditSaveAmount(e.target.value)} />
+                    <Input type="number" value={editSaveAmount} onChange={(e) => setEditSaveAmount(e.target.value)} onKeyDown={(e) => handleKeyDown(e, p)} />
                   </div>
                   <div>
                     <Label>Name</Label>
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => handleKeyDown(e, p)} />
                   </div>
                   <div className="sm:col-span-3 flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2 border px-3 py-2 rounded-md bg-accent/10">
@@ -369,7 +412,7 @@ const AdminProducts = () => {
                           const el = document.getElementById(`add-images-${p.id}`) as HTMLInputElement | null;
                           if (el) el.value = "";
                         }} />
-                        <Button variant="secondary" onClick={() => (document.getElementById(`add-images-${p.id}`) as HTMLInputElement | null)?.click()}>Add Images</Button>
+                        <Button type="button" variant="secondary" onClick={() => (document.getElementById(`add-images-${p.id}`) as HTMLInputElement | null)?.click()}>Add Images</Button>
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-3">
@@ -382,31 +425,12 @@ const AdminProducts = () => {
                     </div>
                   </div>
                   <div className="sm:col-span-3 flex gap-2">
-                    <Button
-                      onClick={() => {
-                        updateMutation.mutate({
-                          id: p.id,
-                          payload: {
-                            price: Number(edit.price),
-                            stock: Number(edit.stock),
-                            discount: edit.discount ? Number(edit.discount) : undefined,
-                            name: editName,
-                            category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
-                            images: editImages,
-                            originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
-                            saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
-                            onSale: edit.onSale,
-                            isBestSeller: edit.isBestSeller,
-                          },
-                        });
-                        setEditingId(null);
-                      }}
-                    >
-                      Save Changes
+                    <Button type="submit">
+                      Save
                     </Button>
-                    <Button variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
+                    <Button type="button" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
                   </div>
-                </div>
+                </form>
               )}
             </div>
           ))}

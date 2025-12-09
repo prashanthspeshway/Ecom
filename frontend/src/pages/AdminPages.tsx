@@ -154,21 +154,30 @@ export default function AdminPages() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold font-serif">Support Pages</h1>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Add Page</Button>
-          </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingPage ? "Edit Page" : "Add New Page"}</DialogTitle>
+              <DialogTitle>Edit Page</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" value={formData.title} onChange={handleTitleChange} required />
+                <Input 
+                    id="title" 
+                    value={formData.title} 
+                    onChange={handleTitleChange} 
+                    required 
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(e); }}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="slug">Slug (URL path)</Label>
-                <Input id="slug" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} required />
+                <Input 
+                  id="slug" 
+                  value={formData.slug} 
+                  onChange={(e) => setFormData({...formData, slug: e.target.value})} 
+                  required 
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(e); }}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="images">Image URL (Optional)</Label>
@@ -177,6 +186,7 @@ export default function AdminPages() {
                     value={formData.images?.[0] || ""} 
                     onChange={(e) => setFormData({...formData, images: e.target.value ? [e.target.value] : []})} 
                     placeholder="https://example.com/image.jpg"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(e); }}
                 />
               </div>
               <div className="grid gap-2">

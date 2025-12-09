@@ -11,7 +11,13 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
       const isSale = req.query.sale === "true";
       const isBestSeller = req.query.bestseller === "true";
 
+      let useDb = false;
       if (db) {
+          const count = await db.collection("products").estimatedDocumentCount();
+          if (count > 0) useDb = true;
+      }
+
+      if (useDb) {
         let query = {};
         if (isSale) query.onSale = true;
         if (isBestSeller) query.isBestSeller = true;
@@ -51,7 +57,13 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
   router.get("/:id", async (req, res) => {
     try {
       const db = getDb();
+      let useDb = false;
       if (db) {
+          const count = await db.collection("products").estimatedDocumentCount();
+          if (count > 0) useDb = true;
+      }
+
+      if (useDb) {
         const item = await db.collection("products").findOne({ id: req.params.id });
         if (!item) return res.status(404).json({ error: "Not found" });
         const sanitized = { ...item, images: Array.isArray(item.images) ? item.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] };

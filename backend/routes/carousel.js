@@ -6,7 +6,12 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getCar
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
+      let useDb = false;
       if (db) {
+        const count = await db.collection("carousel").countDocuments({ _id: "default" });
+        if (count > 0) useDb = true;
+      }
+      if (useDb) {
         const doc = await db.collection("carousel").findOne({ _id: "default" });
         return res.json(Array.isArray(doc?.images) ? doc.images.slice(0,5) : []);
       }

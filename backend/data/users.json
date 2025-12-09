@@ -46,5 +46,47 @@
     "name": "admin2",
     "password": "$2a$10$Q2X0Za/xqOk8Fs3cEbIrx.KBAXjLTR4jAliixqGhLWc8Lv.uRBs0q",
     "role": "admin"
+  },
+  {
+    "email": "test_admin_1765275139333@example.com",
+    "name": "Test Admin",
+    "password": "$2a$10$O5lWYRowW8CTmCgM1AWb4O4.aVfMG0/bVP.Env334iZyxrfd.ZV.m",
+    "role": "admin"
+  },
+  {
+    "email": "test_admin_1765275371868@example.com",
+    "name": "Test Admin",
+    "password": "$2a$10$18nOlQFGM2xwlxkmcPjvNuRCM8oogbhf.ZGRPUfO9QJmwoF3tXd4y",
+    "role": "user"
+  },
+  {
+    "email": "test_admin_1765275400341@example.com",
+    "name": "Test Admin",
+    "password": "$2a$10$F2epLynmJ3B0nwmIjlSGSO1mwE5Fb6ara03Sr1jA3oktbWyCOxT2O",
+    "role": "admin"
+  },
+  {
+    "email": "test_admin_1765275439401@example.com",
+    "name": "Test Admin",
+    "password": "$2a$10$dJj.Ts/KuzumsBT9RxL98eQswm85Jw2LWkuc82iAQPN7yR8HQy5EC",
+    "role": "admin"
+  },
+  {
+    "email": "admin1765277734609@test.com",
+    "name": "Admin Test",
+    "password": "$2a$10$ILXz1XFk46//T/kNUBSgQOQX3Fcr4f2OVfJcYR.j7WHyPksBP92bC",
+    "role": "user"
+  },
+  {
+    "email": "admin1765277758843@test.com",
+    "name": "Admin Test",
+    "password": "$2a$10$xaBRJYE4tHRXyLB7sqDmLu7aIxUZQTd7oTbEEbC6jfyixkk/Z0UjK",
+    "role": "admin"
+  },
+  {
+    "email": "admin1765277817592@test.com",
+    "name": "Admin Test",
+    "password": "$2a$10$2Zq0Uq0tFqd0ZFoFqxB9peb/iwH7OW8f0m5PH3foyob360spZmSla",
+    "role": "user"
   }
 ]

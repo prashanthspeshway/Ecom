@@ -12,6 +12,31 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const handleLogin = async () => {
+    try {
+      await login({ email, password });
+      const role = getRole();
+      const params = new URLSearchParams(location.search);
+      const redirect = params.get("redirect");
+      if (redirect) navigate(redirect);
+      else navigate(role === "admin" ? "/admin" : "/account");
+    } catch (e) {
+      if (e instanceof TypeError) {
+        setError("Backend is not connected");
+        return;
+      }
+      const msg = e instanceof Error ? e.message : "LOGIN_FAILED";
+      if (msg === "INVALID_CREDENTIALS") setError("Wrong credentials");
+      else setError("Login failed");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleLogin();
+    }
+  };
+
   return (
     <div className="container px-4 py-8">
       <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
@@ -19,33 +44,28 @@ const Login = () => {
         {error && <p className="text-destructive">{error}</p>}
         <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input 
+            id="email" 
+            type="email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            onKeyDown={handleKeyDown}
+          />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input 
+            id="password" 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            onKeyDown={handleKeyDown}
+          />
         </div>
         <div className="flex gap-2 sm:hidden">
           <Button
             className="flex-1"
-            onClick={async () => {
-              try {
-                await login({ email, password });
-                const role = getRole();
-                const params = new URLSearchParams(location.search);
-                const redirect = params.get("redirect");
-                if (redirect) navigate(redirect);
-                else navigate(role === "admin" ? "/admin" : "/account");
-              } catch (e) {
-                if (e instanceof TypeError) {
-                  setError("Backend is not connected");
-                  return;
-                }
-                const msg = e instanceof Error ? e.message : "LOGIN_FAILED";
-                if (msg === "INVALID_CREDENTIALS") setError("Wrong credentials");
-                else setError("Login failed");
-              }
-            }}
+            onClick={handleLogin}
           >
             Sign In
           </Button>
@@ -64,24 +84,7 @@ const Login = () => {
         <div className="hidden sm:flex gap-2">
           <Button
             className="flex-1"
-            onClick={async () => {
-              try {
-                await login({ email, password });
-                const role = getRole();
-                const params = new URLSearchParams(location.search);
-                const redirect = params.get("redirect");
-                if (redirect) navigate(redirect);
-                else navigate(role === "admin" ? "/admin" : "/account");
-              } catch (e) {
-                if (e instanceof TypeError) {
-                  setError("Backend is not connected");
-                  return;
-                }
-                const msg = e instanceof Error ? e.message : "LOGIN_FAILED";
-                if (msg === "INVALID_CREDENTIALS") setError("Wrong credentials");
-                else setError("Login failed");
-              }
-            }}
+            onClick={handleLogin}
           >
             Sign In
           </Button>

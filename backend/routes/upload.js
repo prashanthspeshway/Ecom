@@ -52,6 +52,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, upload
 
   router.post("/upload", authMiddleware, adminOnly, upload.array("files", 10), async (req, res) => {
     try {
+      console.log("Upload request received", req.files?.length);
       if (s3) {
         const uploaded = [];
         for (const file of (req.files || [])) {
@@ -63,16 +64,19 @@ export default function register({ app, getDb, authMiddleware, adminOnly, upload
             const url = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${Key}`;
             uploaded.push(url);
           } catch (err) {
+            console.error("S3 upload failed, falling back to local", err);
             const localName = `${Date.now()}_${base}${ext}`;
             const localPath = path.join(uploadDir, localName);
-            try { fs.writeFileSync(localPath, file.buffer); uploaded.push(`/uploads/${localName}`); } catch {}
+            try { fs.writeFileSync(localPath, file.buffer); uploaded.push(`/uploads/${localName}`); } catch (e) { console.error("Local write failed", e); }
           }
         }
         return res.json({ urls: uploaded });
       }
       const files = (req.files || []).map((f) => `/uploads/${path.basename(f.path)}`);
+      console.log("Local upload success", files);
       res.json({ urls: files });
     } catch (e) {
+      console.error("Upload route error", e);
       res.status(500).json({ error: "Upload failed", detail: String(e?.message || e) });
     }
   });
