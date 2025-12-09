@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "about-us",
+    "title": "About Us",
+    "content": "<p>Welcome to Saree Elegance. We are dedicated to providing the finest quality sarees.</p>",
+    "images": []
+  },
+  {
+    "slug": "our-stores",
+    "title": "Our Stores",
+    "content": "<p>Visit our stores in major cities across the country.</p>",
+    "images": []
+  },
+  {
+    "slug": "contact-us",
+    "title": "Contact Us",
+    "content": "<p>Email us at support@sareeelegance.com or call us at +91-1234567890.</p>",
+    "images": []
+  },
+  {
+    "slug": "franchise",
+    "title": "Own A Koskii Franchise",
+    "content": "<p>Partner with us and become a part of the Saree Elegance family.</p>",
+    "images": []
+  },
+  {
+    "slug": "blog",
+    "title": "Blog",
+    "content": "<p>Read our latest stories and updates.</p>",
+    "images": []
+  },
+  {
+    "slug": "returns-policy",
+    "title": "Returns Policy",
+    "content": "<p>We offer a hassle-free 7-day return policy.</p>",
+    "images": []
+  },
+  {
+    "slug": "privacy-policy",
+    "title": "Privacy Policy",
+    "content": "<p>Your privacy is important to us.</p>",
+    "images": []
+  },
+  {
+    "slug": "terms-conditions",
+    "title": "Terms & Conditions",
+    "content": "<p>Please read our terms and conditions carefully.</p>",
+    "images": []
+  }
+]

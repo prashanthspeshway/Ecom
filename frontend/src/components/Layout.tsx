@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { ShoppingCart, User, Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { getRole, getToken, clearAuth } from "@/lib/auth";
+import { getRole, getToken, clearAuth, apiBase, authFetch } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
 import { clearCart, getCount, syncCartFromServer } from "@/lib/cart";
 import { clearWishlist, syncWishlistFromServer } from "@/lib/wishlist";
@@ -91,6 +92,24 @@ const Layout = ({ children }: LayoutProps) => {
       window.removeEventListener("orders:update", handler as EventListener);
     };
   }, []);
+
+  const { data: footerPages = [] } = useQuery<{ slug: string; title: string }[]>({ 
+    queryKey: ["footer-pages"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/pages`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/products?query=${encodeURIComponent(searchTerm)}`);
+      setSearchOpen(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -163,7 +182,7 @@ const Layout = ({ children }: LayoutProps) => {
             {role === "admin" && (
               <>
                 <Link to="/admin">
-                  <Button variant="ghost">Admin</Button>
+                  <Button variant="ghost">Products</Button>
                 </Link>
                 <Link to="/admin/orders">
                   <Button variant="ghost" className="relative">
@@ -174,6 +193,9 @@ const Layout = ({ children }: LayoutProps) => {
                       </span>
                     ) : null}
                   </Button>
+                </Link>
+                <Link to="/admin/pages">
+                  <Button variant="ghost">Pages</Button>
                 </Link>
               </>
             )}
@@ -236,19 +258,13 @@ const Layout = ({ children }: LayoutProps) => {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Shop</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/products" className="hover:text-foreground">All Sarees</Link></li>
-                <li><Link to="/products?category=silk" className="hover:text-foreground">Silk Collection</Link></li>
-                <li><Link to="/products?category=designer" className="hover:text-foreground">Designer Range</Link></li>
-              </ul>
-            </div>
-            <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/contact" className="hover:text-foreground">Contact Us</Link></li>
-                <li><Link to="/shipping" className="hover:text-foreground">Shipping Info</Link></li>
-                <li><Link to="/returns" className="hover:text-foreground">Returns</Link></li>
+                {footerPages.map((page) => (
+                  <li key={page.slug}>
+                    <Link to={`/pages/${page.slug}`} className="hover:text-foreground">{page.title}</Link>
+                  </li>
+                ))}
               </ul>
             </div>
             <div>
