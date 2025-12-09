@@ -39,7 +39,8 @@ export default function AdminPages() {
       const res = await authFetch("/api/pages");
       if (!res.ok) throw new Error("Failed to fetch pages");
       return res.json();
-    }
+    },
+    retry: false
   });
 
   const createMutation = useMutation({

@@ -54,7 +54,7 @@ export async function login(payload: { email: string; password: string }) {
   return data;
 }
 
-export const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+export const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
 function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
   if (typeof input === "string") {

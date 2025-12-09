@@ -24,6 +24,7 @@ const DynamicPage = () => {
       return res.json();
     },
     enabled: !!slug,
+    retry: false,
   });
 
   if (isLoading) {

@@ -99,7 +99,8 @@ const Layout = ({ children }: LayoutProps) => {
       const res = await fetch(`${apiBase}/api/pages`);
       if (!res.ok) return [];
       return res.json();
-    }
+    },
+    retry: false
   });
 
   const handleSearch = (e: React.FormEvent) => {
