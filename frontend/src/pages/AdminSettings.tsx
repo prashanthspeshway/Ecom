@@ -112,8 +112,17 @@ const AdminSettings = () => {
             <Label>Logo</Label>
             <div className="flex items-center gap-4">
               {logoUrl && (
-                <div className="border p-2 rounded bg-secondary/10">
+                <div className="relative border p-2 rounded bg-secondary/10 group">
                   <img src={logoUrl} alt="Logo" className="h-16 object-contain" />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={() => setLogoUrl("")}
+                  >
+                    <span className="sr-only">Remove</span>
+                    <span className="text-xs">×</span>
+                  </Button>
                 </div>
               )}
               <Input 
@@ -122,15 +131,24 @@ const AdminSettings = () => {
                 onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "logo")}
               />
             </div>
-            <p className="text-sm text-muted-foreground">Recommended height: 60px. Will replace the text logo.</p>
+            <p className="text-sm text-muted-foreground">Recommended height: 40px. Will replace the text logo.</p>
           </div>
 
           <div className="space-y-2">
             <Label>Favicon</Label>
             <div className="flex items-center gap-4">
               {faviconUrl && (
-                <div className="border p-2 rounded bg-secondary/10">
+                <div className="relative border p-2 rounded bg-secondary/10 group">
                   <img src={faviconUrl} alt="Favicon" className="w-8 h-8 object-contain" />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={() => setFaviconUrl("")}
+                  >
+                    <span className="sr-only">Remove</span>
+                    <span className="text-xs">×</span>
+                  </Button>
                 </div>
               )}
               <Input 
