@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authFetch, getRole, apiBase } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import Cropper from "react-easy-crop";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
 
 const AdminSettings = () => {
   const navigate = useNavigate();
@@ -28,6 +31,14 @@ const AdminSettings = () => {
   const [logoUrl, setLogoUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
   const [siteTitle, setSiteTitle] = useState("");
+
+  // Crop state
+  const [cropOpen, setCropOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [uploadType, setUploadType] = useState<"logo" | "favicon">("logo");
 
   useEffect(() => {
     if (settings) {
@@ -57,21 +68,88 @@ const AdminSettings = () => {
     }
   });
 
-  const handleUpload = async (file: File, type: "logo" | "favicon") => {
-    const formData = new FormData();
-    formData.append("files", file);
-    
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: "logo" | "favicon") => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        setImageSrc(reader.result as string);
+        setUploadType(type);
+        setCropOpen(true);
+      });
+      reader.readAsDataURL(file);
+    }
+    // reset input
+    e.target.value = "";
+  };
+
+  const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener("load", () => resolve(image));
+      image.addEventListener("error", (error) => reject(error));
+      image.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<Blob> => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+          return;
+        }
+        resolve(blob);
+      }, "image/jpeg");
+    });
+  };
+
+  const handleCropSave = async () => {
+    if (!imageSrc || !croppedAreaPixels) return;
     try {
+      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+      const file = new File([croppedBlob], "cropped.jpg", { type: "image/jpeg" });
+      
+      const formData = new FormData();
+      formData.append("files", file);
+      
       const res = await authFetch("/api/upload", {
         method: "POST",
         body: formData,
       });
+      
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       const url = data.urls[0];
       
-      if (type === "logo") setLogoUrl(url);
+      if (uploadType === "logo") setLogoUrl(url);
       else setFaviconUrl(url);
+      
+      setCropOpen(false);
+      setImageSrc(null);
+      setZoom(1);
     } catch (e) {
       toast.error("Upload failed");
     }
@@ -128,7 +206,7 @@ const AdminSettings = () => {
               <Input 
                 type="file" 
                 accept="image/*"
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "logo")}
+                onChange={(e) => onFileChange(e, "logo")}
               />
             </div>
             <p className="text-sm text-muted-foreground">Recommended height: 40px. Will replace the text logo.</p>
@@ -154,7 +232,7 @@ const AdminSettings = () => {
               <Input 
                 type="file" 
                 accept="image/*"
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], "favicon")}
+                onChange={(e) => onFileChange(e, "favicon")}
               />
             </div>
              <p className="text-sm text-muted-foreground">Recommended size: 32x32px or 64x64px.</p>
@@ -165,6 +243,42 @@ const AdminSettings = () => {
       <Button onClick={handleSave} disabled={updateMutation.isPending}>
         {updateMutation.isPending ? "Saving..." : "Save Changes"}
       </Button>
+
+      <Dialog open={cropOpen} onOpenChange={setCropOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Crop Image</DialogTitle>
+          </DialogHeader>
+          <div className="relative h-64 w-full bg-black/5 mt-4">
+            {imageSrc && (
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={uploadType === "logo" ? 3 / 1 : 1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+              />
+            )}
+          </div>
+          <div className="py-4">
+            <Label>Zoom</Label>
+            <Slider
+              value={[zoom]}
+              min={1}
+              max={3}
+              step={0.1}
+              onValueChange={(v) => setZoom(v[0])}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCropOpen(false)}>Cancel</Button>
+            <Button onClick={handleCropSave}>Crop & Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
