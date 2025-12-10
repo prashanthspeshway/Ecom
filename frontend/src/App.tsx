@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminPages from "./pages/AdminPages";
+import AdminSettings from "./pages/AdminSettings";
 import DynamicPage from "./pages/DynamicPage";
 import OrderTracking from "./pages/OrderTracking";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/support" element={<AdminPages />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/order/:id" element={<OrderTracking />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

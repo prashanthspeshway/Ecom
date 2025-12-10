@@ -81,6 +81,7 @@ function FiltersPanel({
 const Products = () => {
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState("popularity");
   const location = useLocation();
   const categoryParam = useMemo(() => new URLSearchParams(location.search).get("category"), [location.search]);
   const isNew = categoryParam === "new";
@@ -127,8 +128,15 @@ const Products = () => {
       const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
       return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesPrice;
     });
+
+    if (sortBy === "price-low") {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortBy === "price-high") {
+      list.sort((a, b) => b.price - a.price);
+    }
+    
     return list;
-  }, [data, query, categoryParam, subParam, selectedCategories, priceRange]);
+  }, [data, query, categoryParam, subParam, selectedCategories, priceRange, sortBy]);
 
   const title = useMemo(() => {
     if (isNew) return "New Arrivals";
@@ -144,7 +152,7 @@ const Products = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">{title}</h1>
         <div className="flex items-center gap-4">
-          <Select defaultValue="popularity">
+          <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>

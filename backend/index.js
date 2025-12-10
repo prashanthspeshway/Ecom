@@ -24,6 +24,7 @@ import registerWishlist from "./routes/wishlist.js";
 import registerCategoryTiles from "./routes/categoryTiles.js";
 import registerCarousel from "./routes/carousel.js";
 import registerPages from "./routes/pages.js";
+import registerSettings from "./routes/settings.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,6 +71,8 @@ const carouselPath = path.join(__dirname, "data", "carousel.json");
 let carousel = [];
 const pagesPath = path.join(__dirname, "data", "pages.json");
 let pages = [];
+const settingsPath = path.join(__dirname, "data", "settings.json");
+let settings = {};
 
 function loadData() {
   try {
@@ -165,6 +168,13 @@ function loadData() {
     pages = [];
     try { fs.mkdirSync(path.dirname(pagesPath), { recursive: true }); } catch {}
     try { fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2)); } catch {}
+  }
+  try {
+    const raw = fs.readFileSync(settingsPath, "utf-8");
+    settings = JSON.parse(raw);
+  } catch (e) {
+    settings = { logoUrl: "", faviconUrl: "", siteTitle: "Saree Elegance" };
+    try { fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2)); } catch {}
   }
 }
 
@@ -438,6 +448,14 @@ initDb().finally(() => {
       setPages: (arr) => { pages = arr; },
       savePages: savePagesToFile,
     });
+    registerSettings({
+      app,
+      getDb: () => db,
+      authMiddleware,
+      adminOnly,
+      getSettings: () => settings,
+      saveSettings: (obj) => { settings = obj; saveSettingsToFile(); },
+    });
     app.listen(port, () => {
       console.log(`[backend] listening on http://localhost:${port}`);
     });
@@ -557,5 +575,10 @@ function saveCarouselToFile() {
 function savePagesToFile() {
   try {
     fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2));
+  } catch {}
+}
+function saveSettingsToFile() {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
   } catch {}
 }

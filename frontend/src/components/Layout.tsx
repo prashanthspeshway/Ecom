@@ -103,6 +103,31 @@ const Layout = ({ children }: LayoutProps) => {
     retry: false
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/settings`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (settings?.siteTitle) {
+      document.title = settings.siteTitle;
+    }
+    if (settings?.faviconUrl) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = settings.faviconUrl;
+    }
+  }, [settings]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
@@ -141,9 +166,13 @@ const Layout = ({ children }: LayoutProps) => {
             </Sheet>
 
             <Link to="/" className="flex items-center">
-              <span className="font-serif text-2xl font-bold text-primary">
-                Saree Elegance
-              </span>
+              {settings?.logoUrl ? (
+                <img src={settings.logoUrl} alt={settings.siteTitle || "Logo"} className="h-14 object-contain" />
+              ) : (
+                <span className="font-serif text-2xl font-bold text-primary">
+                  {settings?.siteTitle || "Saree Elegance"}
+                </span>
+              )}
             </Link>
 
             {role !== "admin" && (
@@ -195,6 +224,9 @@ const Layout = ({ children }: LayoutProps) => {
                 </Link>
                 <Link to="/admin/support">
                   <Button variant="ghost">Support</Button>
+                </Link>
+                <Link to="/admin/settings">
+                  <Button variant="ghost">Settings</Button>
                 </Link>
               </>
             )}
@@ -275,7 +307,7 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            © 2024 Saree Elegance. All rights reserved.
+            © 2025 Saree Elegance. All rights reserved By Speshway Solutions.
           </div>
         </div>
       </footer>
