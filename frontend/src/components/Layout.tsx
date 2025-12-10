@@ -139,7 +139,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="w-full flex h-16 items-center justify-between px-4">
+        <div className="w-full flex h-16 items-center justify-between pr-4 pl-0">
           <div className="flex items-center gap-6">
             <Sheet>
               <SheetTrigger asChild>
@@ -165,9 +165,9 @@ const Layout = ({ children }: LayoutProps) => {
               </SheetContent>
             </Sheet>
 
-            <Link to="/" className="flex items-center h-full max-h-16 overflow-hidden">
+            <Link to="/" className="flex items-center h-full max-h-16 overflow-hidden w-[300px]">
               {settings?.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.siteTitle || "Logo"} className="h-full w-auto object-contain" />
+                <img src={settings.logoUrl} alt={settings.siteTitle || "Logo"} className="h-full w-full object-contain object-left" />
               ) : (
                 <span className="font-serif text-2xl font-bold text-primary">
                   {settings?.siteTitle || "Saree Elegance"}
