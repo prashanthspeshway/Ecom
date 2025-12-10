@@ -206,6 +206,7 @@ const AdminSettings = () => {
               <Input 
                 type="file" 
                 accept="image/*"
+                onClick={(e) => (e.currentTarget.value = "")}
                 onChange={(e) => onFileChange(e, "logo")}
               />
             </div>
@@ -232,6 +233,7 @@ const AdminSettings = () => {
               <Input 
                 type="file" 
                 accept="image/*"
+                onClick={(e) => (e.currentTarget.value = "")}
                 onChange={(e) => onFileChange(e, "favicon")}
               />
             </div>
@@ -249,13 +251,13 @@ const AdminSettings = () => {
           <DialogHeader>
             <DialogTitle>Crop Image</DialogTitle>
           </DialogHeader>
-          <div className="relative h-64 w-full bg-black/5 mt-4">
+          <div className="relative h-[400px] w-full bg-black/5 mt-4">
             {imageSrc && (
               <Cropper
                 image={imageSrc}
                 crop={crop}
                 zoom={zoom}
-                aspect={uploadType === "logo" ? 3 / 1 : 1}
+                aspect={uploadType === "logo" ? 6 / 1 : 1}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}

@@ -61,6 +61,11 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)} 
             onKeyDown={handleKeyDown}
           />
+          <div className="flex justify-end mt-1">
+            <Button variant="link" className="p-0 h-auto font-normal text-xs text-muted-foreground" onClick={() => navigate("/forgot-password")}>
+              Forgot password?
+            </Button>
+          </div>
         </div>
         <div className="flex gap-2 sm:hidden">
           <Button

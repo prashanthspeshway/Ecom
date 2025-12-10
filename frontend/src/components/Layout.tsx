@@ -139,7 +139,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="w-full flex h-16 items-center justify-between pr-4 pl-0">
+        <div className="w-full flex h-16 items-center justify-between px-6 md:px-12">
           <div className="flex items-center gap-6">
             <Sheet>
               <SheetTrigger asChild>
@@ -161,11 +161,27 @@ const Layout = ({ children }: LayoutProps) => {
                   <Link to="/products?category=bestsellers" className="text-lg font-medium hover:text-primary">
                     Best Sellers
                   </Link>
+                  {role === "admin" && (
+                    <>
+                      <Link to="/admin" className="text-lg font-medium hover:text-primary">
+                        Products
+                      </Link>
+                      <Link to="/admin/orders" className="text-lg font-medium hover:text-primary">
+                        Orders
+                      </Link>
+                      <Link to="/admin/support" className="text-lg font-medium hover:text-primary">
+                        Support
+                      </Link>
+                      <Link to="/admin/settings" className="text-lg font-medium hover:text-primary">
+                        Settings
+                      </Link>
+                    </>
+                  )}
                 </nav>
               </SheetContent>
             </Sheet>
 
-            <Link to="/" className="flex items-center h-full max-h-16 overflow-hidden w-[120px]">
+            <Link to="/" className={`flex items-center h-full max-h-16 overflow-hidden ${settings?.logoUrl ? "w-[400px]" : ""}`}>
               {settings?.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.siteTitle || "Logo"} className="h-full w-full object-contain object-left" />
               ) : (
