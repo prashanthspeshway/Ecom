@@ -165,7 +165,7 @@ const Layout = ({ children }: LayoutProps) => {
               </SheetContent>
             </Sheet>
 
-            <Link to="/" className="flex items-center h-full">
+            <Link to="/" className="flex items-center h-full max-h-16 overflow-hidden">
               {settings?.logoUrl ? (
                 <img src={settings.logoUrl} alt={settings.siteTitle || "Logo"} className="h-full w-auto object-contain" />
               ) : (
