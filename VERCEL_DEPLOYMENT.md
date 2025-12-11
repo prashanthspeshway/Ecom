@@ -25,7 +25,7 @@ Before deploying, you need to set up environment variables in Vercel:
 
 ```bash
 # MongoDB
-MONGO_URI=mongodb+srv://ecommerce:12345@cluster0.khakamc.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
 DB_NAME=ecom
 
 # JWT Authentication
