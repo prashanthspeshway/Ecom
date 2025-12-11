@@ -31,7 +31,8 @@ const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 export { apiBase };
 
 export async function register(payload: { email: string; password: string; name?: string; invite?: string }) {
-  const res = await fetch("/api/auth/register", {
+  const url = apiBase ? `${apiBase}/api/auth/register` : "/api/auth/register";
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -51,7 +52,8 @@ export async function register(payload: { email: string; password: string; name?
 }
 
 export async function login(payload: { email: string; password: string }) {
-  const res = await fetch("/api/auth/login", {
+  const url = apiBase ? `${apiBase}/api/auth/login` : "/api/auth/login";
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

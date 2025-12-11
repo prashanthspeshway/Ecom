@@ -51,23 +51,41 @@ if (!process.env.JWT_SECRET) {
 
 const app = express();
 
-// CORS configuration - allow Vercel deployment URL and localhost
+// CORS configuration - allow Vercel deployment URL, Render frontend, and localhost
 const allowedOrigins = [
   "https://ecom.speshwayhrms.com",
   "http://localhost:8080",
   "http://localhost:5173",
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : null,
+  process.env.FRONTEND_URL ? process.env.FRONTEND_URL : null,
+  // Allow all Vercel preview and production URLs
+  /^https:\/\/.*\.vercel\.app$/,
+  /^https:\/\/.*\.vercel\.app\/.*$/,
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+    
+    // Check if origin matches any allowed pattern
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === "string") {
+        return origin === allowed || origin.startsWith(allowed);
+      }
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed || process.env.NODE_ENV === "development") {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins for now - restrict in production
+      // Log for debugging but allow for now
+      console.log(`[cors] Allowing origin: ${origin}`);
+      callback(null, true);
     }
   },
   credentials: true,
