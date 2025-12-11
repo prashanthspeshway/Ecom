@@ -79,6 +79,8 @@ app.use(express.json());
 // Database connection
 let dbClient = null;
 let db = null;
+let dbInitialized = false;
+let dbInitPromise = null;
 
 // S3 setup
 let s3 = null;
