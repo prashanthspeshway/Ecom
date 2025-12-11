@@ -11,6 +11,3 @@ services:
         value: production
       - key: PORT
         value: 3001
-      # Add your environment variables in Render dashboard:
-      # MONGO_URI, JWT_SECRET, ADMIN_INVITE_CODE, etc.
-
