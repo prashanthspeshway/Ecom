@@ -18,7 +18,7 @@ async function ensureDbInitialized() {
 
 // Export handler that waits for DB initialization
 export default async function handler(req, res) {
-  // Wait for DB initialization (routes are already registered)
+  // Wait for DB initialization (routes are already registered synchronously)
   await ensureDbInitialized();
   // Forward to Express app
   return app(req, res);
