@@ -636,3 +636,15 @@ dbInitPromise
 
 // Export app for Vercel serverless functions
 export default app;
+
+// Export DB initialization promise for Vercel handler
+export function getDbInitPromise() {
+  if (!dbInitPromise) {
+    dbInitPromise = initDb();
+  }
+  return dbInitPromise;
+}
+
+export function isDbInitialized() {
+  return dbInitialized;
+}
