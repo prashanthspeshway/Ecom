@@ -571,55 +571,64 @@ process.on("unhandledRejection", (err) => {
   console.error("[error] Unhandled rejection:", err);
 });
 
+// Register all routes immediately (synchronously)
+// Routes handle DB being null by returning 503 errors
+// This ensures routes are available for Vercel serverless functions
+registerProducts({ app, getDb: () => db, authMiddleware, adminOnly });
+registerCategories({ app, getDb: () => db, authMiddleware, adminOnly });
+registerSubcategories({ app, getDb: () => db, authMiddleware, adminOnly });
+registerAuth({ 
+  app, 
+  getDb: () => db, 
+  signToken, 
+  adminInviteCode: process.env.ADMIN_INVITE_CODE || "", 
+  authMiddleware 
+});
+registerUpload({ 
+  app, 
+  getDb: () => db, 
+  authMiddleware, 
+  adminOnly, 
+  upload, 
+  s3, 
+  hasS3, 
+  uploadDir 
+});
+registerBanners({ app, getDb: () => db, authMiddleware, adminOnly });
+registerCarousel({ app, getDb: () => db, authMiddleware, adminOnly });
+registerBestsellers({ app, getDb: () => db, authMiddleware, adminOnly });
+registerFeatured({ app, getDb: () => db, authMiddleware, adminOnly });
+registerCart({ app, getDb: () => db, authMiddleware });
+registerOrders({ app, getDb: () => db, authMiddleware });
+registerAdminOrders({ app, getDb: () => db, authMiddleware, adminOnly });
+registerWishlist({ app, getDb: () => db, authMiddleware });
+registerCategoryTiles({ app, getDb: () => db, authMiddleware, adminOnly });
+registerSettings({ app, getDb: () => db, authMiddleware, adminOnly });
+registerPages({ app, getDb: () => db, authMiddleware, adminOnly });
+
+console.log("[server] Routes registered");
+
 // Initialize database and start server
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 
-initDb()
+// Store init promise for Vercel
+dbInitPromise = initDb();
+dbInitPromise
   .then(() => {
-    // Register all routes
-    registerProducts({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerCategories({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerSubcategories({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerAuth({ 
-      app, 
-      getDb: () => db, 
-      signToken, 
-      adminInviteCode: process.env.ADMIN_INVITE_CODE || "", 
-      authMiddleware 
-    });
-    registerUpload({ 
-      app, 
-      getDb: () => db, 
-      authMiddleware, 
-      adminOnly, 
-      upload, 
-      s3, 
-      hasS3, 
-      uploadDir 
-    });
-    registerBanners({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerCarousel({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerBestsellers({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerFeatured({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerCart({ app, getDb: () => db, authMiddleware });
-    registerOrders({ app, getDb: () => db, authMiddleware });
-    registerAdminOrders({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerWishlist({ app, getDb: () => db, authMiddleware });
-    registerCategoryTiles({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerSettings({ app, getDb: () => db, authMiddleware, adminOnly });
-    registerPages({ app, getDb: () => db, authMiddleware, adminOnly });
-
-    // Only start server if not in Vercel serverless environment
+    console.log("[server] Database initialized");
+    
+    // Only start HTTP server if not in Vercel serverless environment
     if (!process.env.VERCEL) {
       app.listen(port, () => {
         console.log(`[server] Listening on http://localhost:${port}`);
       });
     } else {
-      console.log("[server] Running as Vercel serverless function");
+      console.log("[server] Running as Vercel serverless function - ready");
     }
   })
   .catch((error) => {
-    console.error("[server] Failed to start:", error.message);
+    console.error("[server] Database initialization failed:", error.message);
+    // Don't exit in Vercel - routes are registered, they'll handle DB errors
     if (!process.env.VERCEL) {
       process.exit(1);
     }
