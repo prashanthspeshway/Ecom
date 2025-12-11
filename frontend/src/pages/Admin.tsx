@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AdminBestSellersDialog } from "@/components/AdminBestSellersDialog";
+import { AdminFeaturedCollectionDialog } from "@/components/AdminFeaturedCollectionDialog";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -66,8 +67,8 @@ const Admin = () => {
 
   
 
-  const initialForm = { name: "", price: "", originalPrice: "", saveAmount: "", images: "", stock: "", category: "", discount: "", onSale: false };
-  const [form, setForm] = useState<{ name: string; price: string; originalPrice: string; saveAmount: string; images: string; stock: string; category: string; discount: string; onSale: boolean }>({
+  const initialForm = { name: "", price: "", originalPrice: "", saveAmount: "", images: "", stock: "", category: "", discount: "" };
+  const [form, setForm] = useState<{ name: string; price: string; originalPrice: string; saveAmount: string; images: string; stock: string; category: string; discount: string }>({
     name: "",
     price: "",
     originalPrice: "",
@@ -76,7 +77,6 @@ const Admin = () => {
     stock: "",
     category: "",
     discount: "",
-    onSale: false,
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null]);
@@ -111,78 +111,6 @@ const Admin = () => {
     return (categoriesData || []).filter((c) => !allSubs.has(c));
   })();
 
-  const handleCreateProduct = async () => {
-    let thumbUrl: string | null = null;
-    if (thumbnailFile) {
-      const tfd = new FormData();
-      tfd.append("files", thumbnailFile);
-      const tres = await authFetch("/api/upload", { method: "POST", body: tfd });
-      const tdata = await tres.json();
-      thumbUrl = (tdata.urls || [])[0] || null;
-    }
-    let uploaded: string[] = [];
-    const selected = files.filter(Boolean) as File[];
-    if (selected.length) {
-      const fd = new FormData();
-      selected.forEach((f) => fd.append("files", f));
-      const res = await authFetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      uploaded = data.urls || [];
-    }
-    const thumbInputUrl = form.images.trim();
-    const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
-    const urls = [] as string[];
-    const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
-    // prepare colorLinks from editor state
-    const colorLinks = colorItems
-      .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
-      .filter((ci) => ci.file || ci.imageUrl);
-    const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!)
-    let uploadedColorUrls: string[] = [];
-    if (filesToUpload.length) {
-      const cfd = new FormData();
-      filesToUpload.forEach((f) => cfd.append("files", f));
-      const cres = await authFetch("/api/upload", { method: "POST", body: cfd });
-      const cdata = await cres.json();
-      uploadedColorUrls = cdata.urls || [];
-    }
-    let colorUrlIndex = 0;
-    const finalColorLinks = colorLinks.map((ci) => ({
-      image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
-      url: ci.url,
-    })).filter((x) => x.image && x.url);
-
-    await createMutation.mutateAsync({
-      name: form.name,
-      price: Number(form.price),
-      images: imagesArray,
-      stock: Number(form.stock || 0),
-      category: selectedSub || form.category,
-      originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
-      saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
-      discount: form.discount ? Number(form.discount) : undefined,
-      colorLinks: finalColorLinks,
-      onSale: form.onSale,
-    });
-    setForm(initialForm);
-    setSelectedSub("");
-    setThumbnailFile(null);
-    setFiles([null, null, null, null, null]);
-    setSelectedPreviewIndex(0);
-    setFilePickerIndex(null);
-    setColorItems([]);
-    const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
-    if (thumbEl) thumbEl.value = "";
-    const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
-    if (multiEl) multiEl.value = "";
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-        handleCreateProduct();
-    }
-  };
-
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmData, setConfirmData] = useState<
     | { type: "category"; name: string }
@@ -198,6 +126,86 @@ const Admin = () => {
   const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
   const [openItem, setOpenItem] = useState<string | undefined>(undefined);
+
+  const handleCreateProduct = async () => {
+    if (!form.name || !form.price) {
+      toast("Name and price are required");
+      return;
+    }
+    try {
+      let thumbUrl: string | null = null;
+      if (thumbnailFile) {
+        const tfd = new FormData();
+        tfd.append("files", thumbnailFile);
+        const tres = await authFetch("/api/upload", { method: "POST", body: tfd });
+        const tdata = await tres.json();
+        thumbUrl = (tdata.urls || [])[0] || null;
+      }
+      let uploaded: string[] = [];
+      const selected = files.filter(Boolean) as File[];
+      if (selected.length) {
+        const fd = new FormData();
+        selected.forEach((f) => fd.append("files", f));
+        const res = await authFetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        uploaded = data.urls || [];
+      }
+      const thumbInputUrl = form.images.trim();
+      const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
+      const urls = [] as string[];
+      const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
+      const colorLinks = colorItems
+        .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
+        .filter((ci) => ci.file || ci.imageUrl);
+      const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!);
+      let uploadedColorUrls: string[] = [];
+      if (filesToUpload.length) {
+        const cfd = new FormData();
+        filesToUpload.forEach((f) => cfd.append("files", f));
+        const cres = await authFetch("/api/upload", { method: "POST", body: cfd });
+        const cdata = await cres.json();
+        uploadedColorUrls = cdata.urls || [];
+      }
+      let colorUrlIndex = 0;
+      const finalColorLinks = colorLinks.map((ci) => ({
+        image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
+        url: ci.url,
+      })).filter((x) => x.image && x.url);
+
+      await createMutation.mutateAsync({
+        name: form.name,
+        price: Number(form.price),
+        images: imagesArray,
+        stock: Number(form.stock || 0),
+        category: selectedSub || form.category,
+        originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
+        saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
+        discount: form.discount ? Number(form.discount) : undefined,
+        colorLinks: finalColorLinks,
+      });
+      setForm(initialForm);
+      setSelectedSub("");
+      setThumbnailFile(null);
+      setFiles([null, null, null, null, null]);
+      setSelectedPreviewIndex(0);
+      setFilePickerIndex(null);
+      setColorItems([]);
+      const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
+      if (thumbEl) thumbEl.value = "";
+      const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
+      if (multiEl) multiEl.value = "";
+    } catch (error) {
+      console.error("Create product error:", error);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && form.name && form.price) {
+      e.preventDefault();
+      handleCreateProduct();
+    }
+  };
+
   const addCategoryMutation = useMutation({
     mutationFn: async (name: string) => {
       const res = await authFetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
@@ -522,7 +530,6 @@ const Admin = () => {
               placeholder="Target URL"
               value={ci.url}
               onChange={(e) => setColorItems((items) => items.map((it, i) => i === idx ? { ...it, url: e.target.value } : it))}
-              onKeyDown={handleKeyDown}
             />
             <div>
               <Button variant="destructive" size="sm" onClick={() => setColorItems((items) => items.filter((_, i) => i !== idx))}>Remove</Button>
@@ -558,37 +565,52 @@ const Admin = () => {
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-card rounded-lg p-4 space-y-4">
           <h2 className="font-serif text-2xl font-bold">Add Product</h2>
+          <form onSubmit={(e) => { e.preventDefault(); handleCreateProduct(); }} className="space-y-4">
           <div>
             <Label>Name</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} onKeyDown={handleKeyDown} />
+            <Input 
+              value={form.name} 
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onKeyDown={handleKeyDown}
+            />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
               <Label>Price</Label>
-              <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} onKeyDown={handleKeyDown} />
+              <Input 
+                type="number" 
+                value={form.price} 
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                onKeyDown={handleKeyDown}
+              />
             </div>
             <div>
               <Label>Discount (%)</Label>
-              <Input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} onKeyDown={handleKeyDown} />
+              <Input 
+                type="number" 
+                value={form.discount} 
+                onChange={(e) => setForm({ ...form, discount: e.target.value })}
+                onKeyDown={handleKeyDown}
+              />
             </div>
             <div>
               <Label>Cutoff</Label>
-              <Input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} onKeyDown={handleKeyDown} />
+              <Input 
+                type="number" 
+                value={form.originalPrice} 
+                onChange={(e) => setForm({ ...form, originalPrice: e.target.value })}
+                onKeyDown={handleKeyDown}
+              />
             </div>
             <div>
               <Label>Save Amount</Label>
-              <Input type="number" value={form.saveAmount} onChange={(e) => setForm({ ...form, saveAmount: e.target.value })} onKeyDown={handleKeyDown} />
-            </div>
-            <div className="flex items-center gap-2 mt-6">
-              <input 
-                type="checkbox" 
-                id="onSale"
-                checked={form.onSale} 
-                onChange={(e) => setForm({ ...form, onSale: e.target.checked })} 
-                className="w-4 h-4"
+              <Input 
+                type="number" 
+                value={form.saveAmount} 
+                onChange={(e) => setForm({ ...form, saveAmount: e.target.value })}
+                onKeyDown={handleKeyDown}
               />
-              <Label htmlFor="onSale">On Sale</Label>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -691,7 +713,12 @@ const Admin = () => {
           </div>
           <div>
             <Label>Stock</Label>
-            <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} onKeyDown={handleKeyDown} />
+            <Input 
+              type="number" 
+              value={form.stock} 
+              onChange={(e) => setForm({ ...form, stock: e.target.value })}
+              onKeyDown={handleKeyDown}
+            />
           </div>
           <div>
             <Label>Category</Label>
@@ -726,11 +753,10 @@ const Admin = () => {
               )}
             </div>
           </div>
-          <Button
-            onClick={handleCreateProduct}
-          >
+          <Button type="submit">
             Create
           </Button>
+          </form>
         </div>
 
         <div className="bg-card rounded-lg p-4 space-y-4">
@@ -865,18 +891,7 @@ const Admin = () => {
           </div>
           {addingCategoryOpen && (
             <div className="flex gap-2">
-              <Input 
-                placeholder="Category name" 
-                value={newCategoryName} 
-                onChange={(e) => setNewCategoryName(e.target.value)} 
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const name = newCategoryName.trim();
-                    if (!name) return;
-                    addCategoryMutation.mutate(name);
-                  }
-                }}
-              />
+              <Input placeholder="Category name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -895,21 +910,7 @@ const Admin = () => {
                     <div className="flex w-full items-center justify-between">
                       {editingCategory === c ? (
                         <div className="flex items-center gap-2">
-                          <Input 
-                            value={editingCategoryValue} 
-                            onChange={(e) => setEditingCategoryValue(e.target.value)} 
-                            className="h-8 w-48" 
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                const v = editingCategoryValue.trim();
-                                if (!v || v === c) { setEditingCategory(null); return; }
-                                updateCategoryMutation.mutate({ oldName: c, newName: v });
-                                setEditingCategory(null);
-                              }
-                            }}
-                          />
+                          <Input value={editingCategoryValue} onChange={(e) => setEditingCategoryValue(e.target.value)} className="h-8 w-48" />
                           <Button
                             size="sm"
                             onClick={(e) => {
@@ -978,20 +979,7 @@ const Admin = () => {
                   <AccordionContent className="px-3">
                     {addingSubFor === c && (
                       <div className="flex gap-2 mb-2">
-                        <Input 
-                          id={`new-sub-input-${c}`} 
-                          placeholder="New subcategory" 
-                          value={newSubName} 
-                          onChange={(e) => setNewSubName(e.target.value)} 
-                          className="h-8" 
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const name = newSubName.trim();
-                              if (!name) return;
-                              addSubMutation.mutate({ category: c, name });
-                            }
-                          }}
-                        />
+                        <Input id={`new-sub-input-${c}`} placeholder="New subcategory" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} className="h-8" />
                         <Button
                           size="sm"
                           variant="secondary"
@@ -1009,19 +997,7 @@ const Admin = () => {
                         <span key={s} className="text-xs rounded-md border px-2 py-1 flex items-center gap-1">
                           {editingSub && editingSub.category === c && editingSub.name === s ? (
                             <>
-                              <Input 
-                                value={editingSubValue} 
-                                onChange={(e) => setEditingSubValue(e.target.value)} 
-                                className="h-7 w-40 text-xs" 
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const v = editingSubValue.trim();
-                                    if (!v || v === s) { setEditingSub(null); return; }
-                                    updateSubMutation.mutate({ category: c, oldName: s, newName: v });
-                                    setEditingSub(null);
-                                  }
-                                }}
-                              />
+                              <Input value={editingSubValue} onChange={(e) => setEditingSubValue(e.target.value)} className="h-7 w-40 text-xs" />
                               <Button
                                 size="sm"
                                 className="h-7 px-2"
@@ -1067,9 +1043,12 @@ const Admin = () => {
         </div>
         
       <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
-        <div>
-          <AdminBestSellersDialog />
-        </div>
+        <h2 className="font-serif text-2xl font-bold">Best Sellers</h2>
+        <AdminBestSellersDialog />
+      </div>
+      <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
+        <h2 className="font-serif text-2xl font-bold">Featured Collection</h2>
+        <AdminFeaturedCollectionDialog />
       </div>
       <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
         <h2 className="font-serif text-2xl font-bold">Category Tiles</h2>

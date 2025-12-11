@@ -128,7 +128,7 @@ const AdminProducts = () => {
   }, [selectedCategory]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [edit, setEdit] = useState<{ price: string; stock: string; discount: string; onSale: boolean; isBestSeller: boolean }>({ price: "", stock: "", discount: "", onSale: false, isBestSeller: false });
+  const [edit, setEdit] = useState<{ price: string; stock: string; discount: string }>({ price: "", stock: "", discount: "" });
   const [editName, setEditName] = useState("");
   
   const [editCategory, setEditCategory] = useState("");
@@ -136,26 +136,32 @@ const AdminProducts = () => {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [editOriginalPrice, setEditOriginalPrice] = useState<string>("");
   const [editSaveAmount, setEditSaveAmount] = useState<string>("");
+  const [editOnSale, setEditOnSale] = useState<boolean>(false);
+  const [editIsBestSeller, setEditIsBestSeller] = useState<boolean>(false);
 
-  const handleKeyDown = (e: React.KeyboardEvent, p: Product) => {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        updateMutation.mutate({
-            id: p.id,
-            payload: {
-                price: Number(edit.price),
-                stock: Number(edit.stock),
-                discount: edit.discount ? Number(edit.discount) : undefined,
-                name: editName,
-                category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
-                images: editImages,
-                originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
-                saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
-                onSale: edit.onSale,
-                isBestSeller: edit.isBestSeller,
-            },
-        });
-        setEditingId(null);
+  const handleSaveProduct = (productId: string) => {
+    updateMutation.mutate({
+      id: productId,
+      payload: {
+        price: Number(edit.price),
+        stock: Number(edit.stock),
+        discount: edit.discount ? Number(edit.discount) : undefined,
+        name: editName,
+        category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
+        images: editImages,
+        originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
+        saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
+        onSale: editOnSale,
+        isBestSeller: editIsBestSeller,
+      },
+    });
+    setEditingId(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, productId: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSaveProduct(productId);
     }
   };
 
@@ -246,46 +252,42 @@ const AdminProducts = () => {
         </div>
         <div className="space-y-4">
           {filtered.map((p: Product) => (
-            <div key={p.id} className="border rounded-lg p-2 relative hover:bg-accent/5 transition-colors">
+            <div key={p.id} className="border rounded-lg p-4 relative">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 flex-shrink-0">
-                    <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.name} className="w-full h-full rounded object-cover border" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate text-sm">{p.name}</p>
-                    <div className="flex flex-wrap gap-1 text-xs">
-                      <span className="text-muted-foreground">₹{p.price}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground">{p.stock} in stock</span>
-                      {p.onSale && <Badge variant="secondary" className="h-4 px-1 text-[10px]">Sale</Badge>}
-                      {p.isBestSeller && <Badge variant="outline" className="h-4 px-1 text-[10px] border-green-600 text-green-600">Best Seller</Badge>}
+                <div className="flex items-center gap-4">
+                  <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.name} className="w-20 h-20 rounded-md object-cover border" />
+                  <div>
+                    <p className="font-semibold">{p.name}</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Badge variant="outline">₹{p.price}</Badge>
+                      <Badge variant="secondary">{p.stock} in stock</Badge>
+                      {p.discount && <Badge>{p.discount}% OFF</Badge>}
+                      {p.onSale && <Badge className="bg-red-600 text-white">On Sale</Badge>}
+                      {p.isBestSeller && <Badge className="bg-green-600 text-white">Best Seller</Badge>}
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="absolute top-2 right-2 flex gap-1">
+              <div className="absolute top-3 right-3 flex gap-2">
                 <Button
                   size="icon"
                   variant="outline"
                   className="h-8 w-8 rounded-full"
                   onClick={() => {
-                    if (editingId === p.id) {
-                      setEditingId(null);
-                    } else {
-                      setEditingId(p.id);
-                      setEdit({ price: String(p.price), stock: String(p.stock), discount: String(p.discount ?? ""), onSale: !!p.onSale, isBestSeller: !!p.isBestSeller });
-                      setEditName(p.name);
-                      
-                      setEditCategory(p.category);
-                      setSelectedLeninSub("");
-                      setEditImages((p.images || []).filter((u) => typeof u === "string" && u && !String(u).startsWith("blob:")));
-                      setEditOriginalPrice(p.originalPrice ? String(p.originalPrice) : "");
-                      setEditSaveAmount(p.saveAmount ? String(p.saveAmount) : "");
-                    }
+                    setEditingId(p.id);
+                    setEdit({ price: String(p.price), stock: String(p.stock), discount: String(p.discount ?? "") });
+                    setEditName(p.name);
+                    
+                    setEditCategory(p.category);
+                    setSelectedLeninSub("");
+                    setEditImages((p.images || []).filter((u) => typeof u === "string" && u && !String(u).startsWith("blob:")));
+                    setEditOriginalPrice(p.originalPrice ? String(p.originalPrice) : "");
+                    setEditSaveAmount(p.saveAmount ? String(p.saveAmount) : "");
+                    setEditOnSale(p.onSale ?? false);
+                    setEditIsBestSeller(p.isBestSeller ?? false);
                   }}
                 >
-                  <Plus className={`h-4 w-4 transition-transform ${editingId === p.id ? "rotate-45" : ""}`} />
+                  <Plus className="h-4 w-4" />
                 </Button>
                 <Button size="icon" variant="destructive" className="h-8 w-8 rounded-full" onClick={() => deleteMutation.mutate(p.id)}>
                   <Trash2 className="h-4 w-4" />
@@ -293,73 +295,83 @@ const AdminProducts = () => {
               </div>
 
               {editingId === p.id && (
-                <form 
-                  className="mt-4 grid sm:grid-cols-3 gap-4"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    updateMutation.mutate({
-                      id: p.id,
-                      payload: {
-                        price: Number(edit.price),
-                        stock: Number(edit.stock),
-                        discount: edit.discount ? Number(edit.discount) : undefined,
-                        name: editName,
-                        category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
-                        images: editImages,
-                        originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
-                        saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
-                        onSale: edit.onSale,
-                        isBestSeller: edit.isBestSeller,
-                      },
-                    });
-                    setEditingId(null);
-                  }}
-                >
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveProduct(p.id); }} className="mt-4 grid sm:grid-cols-3 gap-4">
                   <div>
                     <Label>Price</Label>
-                    <Input type="number" step="0.01" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} onKeyDown={(e) => handleKeyDown(e, p)} />
+                    <Input 
+                      type="number" 
+                      value={edit.price} 
+                      onChange={(e) => setEdit({ ...edit, price: e.target.value })}
+                      onKeyDown={(e) => handleKeyDown(e, p.id)}
+                    />
                   </div>
                   <div>
                     <Label>Stock</Label>
-                    <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} onKeyDown={(e) => handleKeyDown(e, p)} />
+                    <Input 
+                      type="number" 
+                      value={edit.stock} 
+                      onChange={(e) => setEdit({ ...edit, stock: e.target.value })}
+                      onKeyDown={(e) => handleKeyDown(e, p.id)}
+                    />
                   </div>
                   <div>
                     <Label>Discount (%)</Label>
-                    <Input type="number" value={edit.discount} onChange={(e) => setEdit({ ...edit, discount: e.target.value })} onKeyDown={(e) => handleKeyDown(e, p)} />
+                    <Input 
+                      type="number" 
+                      value={edit.discount} 
+                      onChange={(e) => setEdit({ ...edit, discount: e.target.value })}
+                      onKeyDown={(e) => handleKeyDown(e, p.id)}
+                    />
                   </div>
                   <div>
                     <Label>Cutoff</Label>
-                    <Input type="number" value={editOriginalPrice} onChange={(e) => setEditOriginalPrice(e.target.value)} onKeyDown={(e) => handleKeyDown(e, p)} />
+                    <Input 
+                      type="number" 
+                      value={editOriginalPrice} 
+                      onChange={(e) => setEditOriginalPrice(e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, p.id)}
+                    />
                   </div>
                   <div>
                     <Label>Save Amount</Label>
-                    <Input type="number" value={editSaveAmount} onChange={(e) => setEditSaveAmount(e.target.value)} onKeyDown={(e) => handleKeyDown(e, p)} />
+                    <Input 
+                      type="number" 
+                      value={editSaveAmount} 
+                      onChange={(e) => setEditSaveAmount(e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, p.id)}
+                    />
                   </div>
                   <div>
                     <Label>Name</Label>
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => handleKeyDown(e, p)} />
+                    <Input 
+                      value={editName} 
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, p.id)}
+                    />
                   </div>
-                  <div className="sm:col-span-3 flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2 border px-3 py-2 rounded-md bg-accent/10">
-                        <input 
-                          type="checkbox" 
-                          id={`edit-onSale-${p.id}`}
-                          checked={edit.onSale} 
-                          onChange={(e) => setEdit({ ...edit, onSale: e.target.checked })} 
-                          className="w-5 h-5 accent-primary cursor-pointer"
-                        />
-                        <Label htmlFor={`edit-onSale-${p.id}`} className="font-semibold cursor-pointer select-none">On Sale</Label>
+                  <div className="sm:col-span-3 flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id={`onSale-${p.id}`}
+                        checked={editOnSale} 
+                        onChange={(e) => setEditOnSale(e.target.checked)} 
+                        className="w-4 h-4"
+                      />
+                      <Label htmlFor={`onSale-${p.id}`} className="cursor-pointer">On Sale</Label>
                     </div>
-                    <div className="flex items-center gap-2 border px-3 py-2 rounded-md bg-accent/10">
-                        <input 
-                          type="checkbox" 
-                          id={`edit-isBestSeller-${p.id}`}
-                          checked={edit.isBestSeller} 
-                          onChange={(e) => setEdit({ ...edit, isBestSeller: e.target.checked })} 
-                          className="w-5 h-5 accent-primary cursor-pointer"
-                        />
-                        <Label htmlFor={`edit-isBestSeller-${p.id}`} className="font-semibold cursor-pointer select-none">Best Seller</Label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id={`isBestSeller-${p.id}`}
+                        checked={editIsBestSeller} 
+                        onChange={(e) => setEditIsBestSeller(e.target.checked)} 
+                        className="w-4 h-4"
+                      />
+                      <Label htmlFor={`isBestSeller-${p.id}`} className="cursor-pointer">Best Seller</Label>
                     </div>
+                  </div>
+                  <div className="sm:col-span-3 flex items-center gap-3">
                     {editOriginalPrice && (
                       <span className="text-muted-foreground line-through">₹{Number(editOriginalPrice).toLocaleString()}</span>
                     )}
@@ -412,7 +424,7 @@ const AdminProducts = () => {
                           const el = document.getElementById(`add-images-${p.id}`) as HTMLInputElement | null;
                           if (el) el.value = "";
                         }} />
-                        <Button type="button" variant="secondary" onClick={() => (document.getElementById(`add-images-${p.id}`) as HTMLInputElement | null)?.click()}>Add Images</Button>
+                        <Button variant="secondary" onClick={() => (document.getElementById(`add-images-${p.id}`) as HTMLInputElement | null)?.click()}>Add Images</Button>
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-3">
@@ -426,7 +438,7 @@ const AdminProducts = () => {
                   </div>
                   <div className="sm:col-span-3 flex gap-2">
                     <Button type="submit">
-                      Save
+                      Save Changes
                     </Button>
                     <Button type="button" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
                   </div>

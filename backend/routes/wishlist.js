@@ -1,59 +1,80 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, getWishlists, setWishlists, saveWishlists }) {
+export default function register({ app, getDb, authMiddleware }) {
   const router = express.Router();
 
   router.get("/", authMiddleware, async (req, res) => {
     try {
       const db = getDb();
-      if (db) {
-        const list = await db.collection("wishlists").find({ user: req.user.email }).toArray();
-        return res.json(list.map((x) => x.productId));
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const list = Array.isArray(getWishlists()[req.user.email]) ? getWishlists()[req.user.email] : [];
-      res.json(list);
+
+      const items = await db.collection("wishlist")
+        .find({ user: req.user.email })
+        .toArray();
+      const productIds = items.map((i) => i.productId);
+      const products = await db.collection("products")
+        .find({ id: { $in: productIds } })
+        .toArray();
+      
+      res.json(products);
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[wishlist] Get error:", e);
+      res.status(500).json({ error: "Failed to fetch wishlist" });
     }
   });
 
   router.post("/", authMiddleware, async (req, res) => {
     try {
       const { productId } = req.body || {};
-      if (!productId) return res.status(400).json({ error: "productId required" });
+      if (!productId) {
+        return res.status(400).json({ error: "Product ID required" });
+      }
+
       const db = getDb();
-      if (db) {
-        await db.collection("wishlists").updateOne({ user: req.user.email, productId }, { $set: { user: req.user.email, productId } }, { upsert: true });
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      const exists = await db.collection("wishlist").findOne({
+        user: req.user.email,
+        productId,
+      });
+
+      if (exists) {
         return res.json({ success: true });
       }
-      const wl = getWishlists();
-      const list = Array.isArray(wl[req.user.email]) ? wl[req.user.email] : [];
-      if (!list.includes(productId)) list.push(productId);
-      wl[req.user.email] = list;
-      setWishlists(wl);
-      saveWishlists();
+
+      await db.collection("wishlist").insertOne({
+        user: req.user.email,
+        productId,
+      });
+
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[wishlist] Add error:", e);
+      res.status(500).json({ error: "Failed to add to wishlist" });
     }
   });
 
-  router.delete("/", authMiddleware, async (req, res) => {
+  router.delete("/:productId", authMiddleware, async (req, res) => {
     try {
-      const productId = (req.query.productId || "").toString();
+      const productId = req.params.productId;
       const db = getDb();
-      if (db) {
-        await db.collection("wishlists").deleteOne({ user: req.user.email, productId });
-        return res.json({ success: true });
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const wl = getWishlists();
-      const list = Array.isArray(wl[req.user.email]) ? wl[req.user.email] : [];
-      wl[req.user.email] = list.filter((id) => id !== productId);
-      setWishlists(wl);
-      saveWishlists();
+
+      await db.collection("wishlist").deleteOne({
+        user: req.user.email,
+        productId,
+      });
+
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[wishlist] Delete error:", e);
+      res.status(500).json({ error: "Failed to remove from wishlist" });
     }
   });
 

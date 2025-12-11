@@ -1,64 +1,69 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, adminOnly, getBanners, setBanners, saveBanners }) {
+export default function register({ app, getDb, authMiddleware, adminOnly }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
-      let useDb = false;
-      if (db) {
-        const count = await db.collection("banners").countDocuments();
-        if (count > 0) useDb = true;
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      if (useDb) {
-        const list = await db.collection("banners").find({}).toArray();
-        return res.json(list.map((b) => b.url));
-      }
-      return res.json(getBanners());
+
+      const list = await db.collection("banners").find({}).toArray();
+      const urls = list.map((b) => b.url);
+      res.json(urls);
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[banners] Get error:", e);
+      res.status(500).json({ error: "Failed to fetch banners" });
     }
   });
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
-      const { urls } = req.body || {};
-      const arr = Array.isArray(urls) ? urls : [];
-      if (!arr.length) return res.status(400).json({ error: "urls required" });
+      const { url } = req.body || {};
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "URL required" });
+      }
+
       const db = getDb();
-      if (db) {
-        for (const u of arr) {
-          const exists = await db.collection("banners").findOne({ url: u });
-          if (!exists) await db.collection("banners").insertOne({ url: u });
-        }
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      const exists = await db.collection("banners").findOne({ url });
+      if (exists) {
         return res.json({ success: true });
       }
-      const list = getBanners();
-      for (const u of arr) { if (!list.includes(u)) list.push(u); }
-      setBanners(list);
-      saveBanners();
+
+      await db.collection("banners").insertOne({ url });
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[banners] Create error:", e);
+      res.status(500).json({ error: "Failed to add banner" });
     }
   });
 
   router.delete("/", authMiddleware, adminOnly, async (req, res) => {
     try {
-      const { url } = req.body || {};
-      if (!url) return res.status(400).json({ error: "url required" });
-      const db = getDb();
-      if (db) {
-        await db.collection("banners").deleteOne({ url });
-        return res.json({ success: true });
+      const body = req.body || {};
+      const queryUrl = (req.query?.url || "").toString();
+      const url = body.url || queryUrl;
+      
+      if (!url) {
+        return res.status(400).json({ error: "URL required" });
       }
-      const list = getBanners().filter((b) => b !== url);
-      setBanners(list);
-      saveBanners();
+
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      await db.collection("banners").deleteOne({ url });
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[banners] Delete error:", e);
+      res.status(500).json({ error: "Failed to delete banner" });
     }
   });
 

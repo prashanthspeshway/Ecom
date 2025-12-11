@@ -1,41 +1,46 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, adminOnly, getCarousel, setCarousel, saveCarousel }) {
+export default function register({ app, getDb, authMiddleware, adminOnly }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
-      let useDb = false;
-      if (db) {
-        const count = await db.collection("carousel").countDocuments({ _id: "default" });
-        if (count > 0) useDb = true;
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      if (useDb) {
-        const doc = await db.collection("carousel").findOne({ _id: "default" });
-        return res.json(Array.isArray(doc?.images) ? doc.images.slice(0,5) : []);
-      }
-      const arr = getCarousel();
-      res.json(Array.isArray(arr) ? arr.slice(0,5) : []);
+
+      const doc = await db.collection("carousel").findOne({ _id: "default" });
+      const images = Array.isArray(doc?.images) ? doc.images.slice(0, 5) : [];
+      res.json(images);
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[carousel] Get error:", e);
+      res.status(500).json({ error: "Failed to fetch carousel" });
     }
   });
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
       const { images } = req.body || {};
-      const list = Array.isArray(images) ? images.filter((u) => typeof u === "string").slice(0,5) : [];
+      const list = Array.isArray(images)
+        ? images.filter((u) => typeof u === "string").slice(0, 5)
+        : [];
+
       const db = getDb();
-      if (db) {
-        await db.collection("carousel").updateOne({ _id: "default" }, { $set: { images: list } }, { upsert: true });
-        return res.json({ success: true });
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      setCarousel(list);
-      saveCarousel();
+
+      await db.collection("carousel").updateOne(
+        { _id: "default" },
+        { $set: { images: list } },
+        { upsert: true }
+      );
+
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[carousel] Update error:", e);
+      res.status(500).json({ error: "Failed to update carousel" });
     }
   });
 

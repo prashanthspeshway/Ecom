@@ -16,8 +16,22 @@ export function clearAuth() {
   localStorage.removeItem("auth_role");
 }
 
+export function getEmail(): string | null {
+  try {
+    const token = getToken();
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload?.email || null;
+  } catch {
+    return null;
+  }
+}
+
+const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+export { apiBase };
+
 export async function register(payload: { email: string; password: string; name?: string; invite?: string }) {
-  const res = await fetch(resolveUrl("/api/auth/register"), {
+  const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -30,13 +44,14 @@ export async function register(payload: { email: string; password: string; name?
     throw new Error("REGISTRATION_FAILED");
   }
   const data = await res.json();
-  setToken(data.token, data.role);
+  const role = data.user?.role || data.role || "user";
+  setToken(data.token, role);
   await syncAccountStateAfterAuth();
   return data;
 }
 
 export async function login(payload: { email: string; password: string }) {
-  const res = await fetch(resolveUrl("/api/auth/login"), {
+  const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -49,26 +64,57 @@ export async function login(payload: { email: string; password: string }) {
     throw new Error("LOGIN_FAILED");
   }
   const data = await res.json();
-  setToken(data.token, data.role);
+  const role = data.user?.role || data.role || "user";
+  setToken(data.token, role);
   await syncAccountStateAfterAuth();
   return data;
 }
 
-export const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-
-function resolveUrl(input: RequestInfo | URL): RequestInfo | URL {
-  if (typeof input === "string") {
-    if (input.startsWith("/")) return `${apiBase}${input}`;
-    return input;
+export async function forgotPassword(email: string) {
+  const url = apiBase ? `${apiBase}/api/auth/forgot-password` : "/api/auth/forgot-password";
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      // Only throw error for server errors, not for user not found (security)
+      if (res.status >= 500) {
+        throw new Error("FAILED");
+      }
+    }
+    return res.json();
+  } catch (e) {
+    // Network errors or other issues
+    if (e instanceof TypeError) {
+      throw new Error("NETWORK_ERROR");
+    }
+    throw e;
   }
-  return input;
+}
+
+export async function resetPassword(token: string, password: string) {
+  const url = apiBase ? `${apiBase}/api/auth/reset-password` : "/api/auth/reset-password";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    let msg = "";
+    try { msg = (await res.json()).error || ""; } catch (err) { void err; }
+    if (res.status === 400 || res.status === 401) throw new Error("INVALID_TOKEN");
+    throw new Error("FAILED");
+  }
+  return res.json();
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const token = getToken();
   const headers = new Headers(init.headers || {});
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  return fetch(resolveUrl(input), { ...init, headers });
+  return fetch(input, { ...init, headers });
 }
 
 import { syncCartFromServer } from "@/lib/cart";
@@ -105,17 +151,5 @@ async function syncAccountStateAfterAuth() {
     await syncWishlistFromServer();
   } catch {
     // no-op
-  }
-}
-
-export function getEmail(): string | null {
-  const token = getToken();
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    const email = payload?.email;
-    return typeof email === "string" ? email : null;
-  } catch {
-    return null;
   }
 }

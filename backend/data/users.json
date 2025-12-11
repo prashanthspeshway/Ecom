@@ -17,7 +17,9 @@
     "email": "user3@gmail.com",
     "name": "user3",
     "password": "$2a$10$XP7xK8ahm7fP0Zm0NXSQgu2YOVRhKTmLDvpAy4a2u1nnlhU6ERdUK",
-    "role": "user"
+    "role": "user",
+    "resetPasswordToken": "c2a64fe89128e1eef59db92101a1849f83d8c856a7375600037f9507583aa9d4",
+    "resetPasswordExpires": 1765436414753
   },
   {
     "email": "admin@example.com",
@@ -95,6 +97,8 @@
     "email": "prashi4515@gmail.com",
     "name": "prashanth",
     "password": "$2a$10$xfxb4imi42xaSsqwOW86FuLkFWQ51ZMAepRycppTXnu06jQfgPZtu",
-    "role": "user"
+    "role": "user",
+    "resetPasswordToken": "ec10c9ba94c09b18b65a069dafe8c08340c5cd30267bf9dd7647bf23b7fe0aff",
+    "resetPasswordExpires": 1765436422070
   }
 ]

@@ -1,26 +1,56 @@
 import express from "express";
 
-export default function register({ app, authMiddleware, adminOnly, getSettings, saveSettings }) {
+export default function register({ app, getDb, authMiddleware, adminOnly }) {
   const router = express.Router();
 
-  router.get("/", (req, res) => {
+  const defaultSettings = {
+    siteTitle: "Saree Elegance",
+    logoUrl: "",
+    faviconUrl: "",
+    description: "Premium handcrafted sarees for every occasion",
+    contactEmail: "",
+    contactPhone: "",
+    address: "",
+    socialMedia: {
+      instagram: "",
+      facebook: "",
+      twitter: "",
+    },
+  };
+
+  router.get("/", async (req, res) => {
     try {
-      const settings = getSettings();
-      res.json(settings);
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      const doc = await db.collection("settings").findOne({ _id: "main" });
+      res.json(doc || defaultSettings);
     } catch (e) {
+      console.error("[settings] Get error:", e);
       res.status(500).json({ error: "Failed to fetch settings" });
     }
   });
 
-  router.put("/", authMiddleware, adminOnly, (req, res) => {
+  router.put("/", authMiddleware, adminOnly, async (req, res) => {
     try {
-        const current = getSettings();
-        const updates = req.body;
-        const newSettings = { ...current, ...updates };
-        saveSettings(newSettings);
-        res.json(newSettings);
+      const settings = req.body || {};
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      await db.collection("settings").updateOne(
+        { _id: "main" },
+        { $set: settings },
+        { upsert: true }
+      );
+
+      res.json({ success: true });
     } catch (e) {
-        res.status(500).json({ error: "Failed to update settings" });
+      console.error("[settings] Update error:", e);
+      res.status(500).json({ error: "Failed to update settings" });
     }
   });
 

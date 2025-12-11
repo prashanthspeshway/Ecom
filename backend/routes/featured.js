@@ -10,13 +10,13 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
         return res.status(503).json({ error: "Database unavailable" });
       }
 
-      const list = await db.collection("bestsellers").find({}).toArray();
+      const list = await db.collection("featured").find({}).toArray();
       const ids = list.map((b) => b.id);
       const products = await db.collection("products").find({ id: { $in: ids } }).toArray();
       res.json(products);
     } catch (e) {
-      console.error("[bestsellers] Get error:", e);
-      res.status(500).json({ error: "Failed to fetch bestsellers" });
+      console.error("[featured] Get error:", e);
+      res.status(500).json({ error: "Failed to fetch featured collection" });
     }
   });
 
@@ -28,11 +28,11 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
         return res.status(503).json({ error: "Database unavailable" });
       }
 
-      // Handle bulk update with ids array (for curated bestsellers)
+      // Handle bulk update with ids array (for curated featured collection)
       if (Array.isArray(ids)) {
-        await db.collection("bestsellers").deleteMany({});
+        await db.collection("featured").deleteMany({});
         if (ids.length > 0) {
-          await db.collection("bestsellers").insertMany(
+          await db.collection("featured").insertMany(
             ids.map((productId) => ({ id: productId }))
           );
         }
@@ -44,16 +44,16 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
         return res.status(400).json({ error: "Product ID required" });
       }
 
-      const exists = await db.collection("bestsellers").findOne({ id });
+      const exists = await db.collection("featured").findOne({ id });
       if (exists) {
         return res.json({ success: true });
       }
 
-      await db.collection("bestsellers").insertOne({ id });
+      await db.collection("featured").insertOne({ id });
       res.json({ success: true });
     } catch (e) {
-      console.error("[bestsellers] Create error:", e);
-      res.status(500).json({ error: "Failed to add bestseller" });
+      console.error("[featured] Create error:", e);
+      res.status(500).json({ error: "Failed to add featured product" });
     }
   });
 
@@ -72,11 +72,11 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
         return res.status(503).json({ error: "Database unavailable" });
       }
 
-      await db.collection("bestsellers").deleteOne({ id });
+      await db.collection("featured").deleteOne({ id });
       res.json({ success: true });
     } catch (e) {
-      console.error("[bestsellers] Delete error:", e);
-      res.status(500).json({ error: "Failed to delete bestseller" });
+      console.error("[featured] Delete error:", e);
+      res.status(500).json({ error: "Failed to delete featured product" });
     }
   });
 
@@ -92,13 +92,14 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
         return res.status(503).json({ error: "Database unavailable" });
       }
 
-      await db.collection("bestsellers").deleteOne({ id });
+      await db.collection("featured").deleteOne({ id });
       res.json({ success: true });
     } catch (e) {
-      console.error("[bestsellers] Delete by id error:", e);
-      res.status(500).json({ error: "Failed to delete bestseller" });
+      console.error("[featured] Delete by id error:", e);
+      res.status(500).json({ error: "Failed to delete featured product" });
     }
   });
 
-  app.use("/api/bestsellers", router);
+  app.use("/api/featured", router);
 }
+

@@ -1,154 +1,117 @@
-import crypto from "crypto";
 import express from "express";
+import crypto from "crypto";
 
-export default function register({ app, getDb, authMiddleware, adminOnly, getProducts, setProducts, saveProducts, getCategories, saveCategories, getSubcategories, getOrders }) {
+export default function register({ app, getDb, authMiddleware, adminOnly }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      const sale = req.query.sale === "true";
+      const bestseller = req.query.bestseller === "true";
       const isNew = req.query.new === "true";
-      const isSale = req.query.sale === "true";
-      const isBestSeller = req.query.bestseller === "true";
-
-      let useDb = false;
-      if (db) {
-          const count = await db.collection("products").estimatedDocumentCount();
-          if (count > 0) useDb = true;
-      }
-
-      if (useDb) {
-        let query = {};
-        if (isSale) query.onSale = true;
-        if (isBestSeller) query.isBestSeller = true;
-        
-        let cursor = db.collection("products").find(query).sort({ createdAt: -1, _id: -1 });
-        if (isNew) cursor = cursor.limit(50);
-        
-        const items = await cursor.toArray();
-        const sanitized = items.map((p) => ({ ...p, images: Array.isArray(p.images) ? p.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] }));
-        return res.json(sanitized);
-      }
       
-      const products = getProducts();
-      let filtered = [...products];
-      
-      if (isSale) {
-        filtered = filtered.filter(p => p.onSale === true);
-      }
-      if (isBestSeller) {
-        filtered = filtered.filter(p => p.isBestSeller === true);
-      }
-      
-      const sorted = filtered
-        .map((p) => ({ ...p, images: Array.isArray(p.images) ? p.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] }))
-        .sort((a, b) => (Number(b.createdAt || 0) - Number(a.createdAt || 0)));
-        
+      let query = {};
+      if (sale) query.onSale = true;
+      if (bestseller) query.isBestSeller = true;
       if (isNew) {
-        res.json(sorted.slice(0, 50));
-      } else {
-        res.json(sorted);
+        const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        query.createdAt = { $gte: oneWeekAgo };
       }
+
+      const list = await db.collection("products").find(query).toArray();
+      res.json(list);
     } catch (e) {
-      res.status(500).json({ error: "Database error" });
+      console.error("[products] Get error:", e);
+      res.status(500).json({ error: "Failed to fetch products" });
     }
   });
 
   router.get("/:id", async (req, res) => {
     try {
       const db = getDb();
-      let useDb = false;
-      if (db) {
-          const count = await db.collection("products").estimatedDocumentCount();
-          if (count > 0) useDb = true;
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
 
-      if (useDb) {
-        const item = await db.collection("products").findOne({ id: req.params.id });
-        if (!item) return res.status(404).json({ error: "Not found" });
-        const sanitized = { ...item, images: Array.isArray(item.images) ? item.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] };
-        return res.json(sanitized);
+      const item = await db.collection("products").findOne({ id: req.params.id });
+      if (!item) {
+        return res.status(404).json({ error: "Product not found" });
       }
-      const products = getProducts();
-      const item = products.find((p) => p.id === req.params.id);
-      if (!item) return res.status(404).json({ error: "Not found" });
-      const sanitized = { ...item, images: Array.isArray(item.images) ? item.images.filter((u) => typeof u === "string" && u && !u.startsWith("blob:")) : [] };
-      res.json(sanitized);
+      res.json(item);
     } catch (e) {
-      res.status(500).json({ error: "Database error" });
+      console.error("[products] Get by id error:", e);
+      res.status(500).json({ error: "Failed to fetch product" });
     }
   });
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
-      const payload = req.body || {};
-      if (!payload.name || !payload.price) return res.status(400).json({ error: "Missing fields" });
-      const doc = {
-        id: payload.id || crypto.randomUUID(),
-        name: payload.name,
-        brand: payload.brand || "",
-        images: payload.images || [],
-        price: Number(payload.price),
-        originalPrice: payload.originalPrice ? Number(payload.originalPrice) : undefined,
-        saveAmount: payload.saveAmount ? Number(payload.saveAmount) : undefined,
-        discount: payload.discount ? Number(payload.discount) : undefined,
-        colors: payload.colors || [],
-        fabrics: payload.fabrics || [],
-        measurements: payload.measurements || { length: "", width: "" },
-        care: payload.care || "",
-        colorLinks: Array.isArray(payload.colorLinks) ? payload.colorLinks : [],
-        stock: payload.stock ? Number(payload.stock) : 0,
-        rating: payload.rating ? Number(payload.rating) : 0,
-        reviews: [],
-        category: payload.category || "",
-        occasion: payload.occasion || "",
-        onSale: Boolean(payload.onSale),
-        isBestSeller: Boolean(payload.isBestSeller),
-        createdAt: Date.now(),
-      };
+      const product = req.body || {};
+      if (!product.name || !product.price) {
+        return res.status(400).json({ error: "Name and price required" });
+      }
+
       const db = getDb();
       if (!db) {
-        const products = getProducts();
-        const sub = getSubcategories();
-        const cats = getCategories();
-        products.push(doc);
-        if (doc.category) {
-          const parent = Object.keys(sub).find((cat) => (sub[cat] || []).includes(doc.category)) || doc.category;
-          if (!cats.includes(parent)) {
-            cats.push(parent);
-            saveCategories();
-          }
-        }
-        saveProducts();
-        return res.json({ success: true, id: doc.id });
+        return res.status(503).json({ error: "Database unavailable" });
       }
+
+      const id = product.id || crypto.randomUUID();
+      const doc = {
+        ...product,
+        id,
+        createdAt: Date.now(),
+      };
+
       await db.collection("products").insertOne(doc);
-      res.json({ success: true, id: doc.id });
+
+      // Auto-create category if it doesn't exist
+      if (product.category) {
+        try {
+          await db.collection("categories").updateOne(
+            { name: product.category },
+            { $setOnInsert: { name: product.category } },
+            { upsert: true }
+          );
+        } catch (catError) {
+          // Category may already exist, ignore
+        }
+      }
+
+      res.json(doc);
     } catch (e) {
-      res.status(500).json({ error: "Create failed" });
+      console.error("[products] Create error:", e);
+      res.status(500).json({ error: "Failed to create product" });
     }
   });
 
   router.put("/:id", authMiddleware, adminOnly, async (req, res) => {
     try {
+      const updates = req.body || {};
       const db = getDb();
       if (!db) {
-        const id = req.params.id;
-        const products = getProducts();
-        const idx = products.findIndex((p) => p.id === id);
-        if (idx === -1) return res.status(404).json({ error: "Not found" });
-        products[idx] = { ...products[idx], ...req.body };
-        setProducts(products);
-        saveProducts();
-        return res.json({ success: true });
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const id = req.params.id;
-      const update = { $set: { ...req.body } };
-      const r = await db.collection("products").updateOne({ id }, update);
-      if (!r.matchedCount) return res.status(404).json({ error: "Not found" });
-      res.json({ success: true });
+
+      const result = await db.collection("products").updateOne(
+        { id: req.params.id },
+        { $set: updates }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const updated = await db.collection("products").findOne({ id: req.params.id });
+      res.json(updated);
     } catch (e) {
-      res.status(500).json({ error: "Update failed" });
+      console.error("[products] Update error:", e);
+      res.status(500).json({ error: "Failed to update product" });
     }
   });
 
@@ -156,50 +119,18 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
     try {
       const db = getDb();
       if (!db) {
-        const id = req.params.id;
-        let products = getProducts();
-        const before = products.length;
-        products = products.filter((p) => p.id !== id);
-        setProducts(products);
-        saveProducts();
-        if (products.length === before) return res.status(404).json({ error: "Not found" });
-        return res.json({ success: true });
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const id = req.params.id;
-      const r = await db.collection("products").deleteOne({ id });
-      if (!r.deletedCount) return res.status(404).json({ error: "Not found" });
-      res.json({ success: true });
-    } catch (e) {
-      res.status(500).json({ error: "Delete failed" });
-    }
-  });
 
-  router.post("/:id/reviews", authMiddleware, async (req, res) => {
-    try {
-      const { rating, comment } = req.body || {};
-      const id = req.params.id;
-      const db = getDb();
-      if (db) {
-        const product = await db.collection("products").findOne({ id });
-        if (!product) return res.status(404).json({ error: "Not found" });
-        const review = { user: req.user.email, rating: Number(rating || 0), comment: comment || "", createdAt: Date.now() };
-        const reviews = Array.isArray(product.reviews) ? [...product.reviews, review] : [review];
-        const avg = reviews.length ? Math.round((reviews.reduce((a, b) => a + Number(b.rating || 0), 0) / reviews.length) * 10) / 10 : 0;
-        await db.collection("products").updateOne({ id }, { $set: { reviews, rating: avg } });
-        return res.json({ success: true });
+      const result = await db.collection("products").deleteOne({ id: req.params.id });
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ error: "Product not found" });
       }
-      const products = getProducts();
-      const idx = products.findIndex((p) => p.id === id);
-      if (idx === -1) return res.status(404).json({ error: "Not found" });
-      const review = { user: req.user.email, rating: Number(rating || 0), comment: comment || "", createdAt: Date.now() };
-      const reviews = Array.isArray(products[idx].reviews) ? [...products[idx].reviews, review] : [review];
-      const avg = reviews.length ? Math.round((reviews.reduce((a, b) => a + Number(b.rating || 0), 0) / reviews.length) * 10) / 10 : 0;
-      products[idx] = { ...products[idx], reviews, rating: avg };
-      setProducts(products);
-      saveProducts();
+
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[products] Delete error:", e);
+      res.status(500).json({ error: "Failed to delete product" });
     }
   });
 

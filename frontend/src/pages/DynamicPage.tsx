@@ -70,3 +70,4 @@ const DynamicPage = () => {
 };
 
 export default DynamicPage;
+

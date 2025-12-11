@@ -1,5 +1,14 @@
 {
   "logoUrl": "",
   "faviconUrl": "",
-  "siteTitle": ""
+  "siteTitle": "",
+  "description": "",
+  "contactEmail": "",
+  "contactPhone": "",
+  "address": "",
+  "socialMedia": {
+    "instagram": "",
+    "facebook": "",
+    "twitter": ""
+  }
 }

@@ -9,6 +9,8 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const base = env.VITE_BASE_URL || "/";
+  const apiBase = env.VITE_API_BASE_URL || "";
+  
   const plugins = [react()];
   if (mode === "development") {
     try {
@@ -16,14 +18,20 @@ export default defineConfig(async ({ mode }) => {
       if (mod?.componentTagger) plugins.push(mod.componentTagger());
     } catch (e) { void e; }
   }
+  
   return {
     base,
     server: {
       host: "::",
       port: 8080,
-      allowedHosts: ["localhost", "127.0.0.1", "7114a8347d47.ngrok-free.app"],
-      hmr: false,
-      proxy: {
+      allowedHosts: ["localhost", "127.0.0.1"],
+      hmr: {
+        port: 8080,
+      },
+      watch: {
+        usePolling: true,
+      },
+      proxy: apiBase ? undefined : {
         "/api": {
           target: "http://localhost:3001",
           changeOrigin: true,
@@ -39,8 +47,7 @@ export default defineConfig(async ({ mode }) => {
     preview: {
       host: "::",
       port: 8080,
-      allowedHosts: ["localhost", "127.0.0.1", "7114a8347d47.ngrok-free.app"],
-      proxy: {
+      proxy: apiBase ? undefined : {
         "/api": {
           target: "http://localhost:3001",
           changeOrigin: true,
@@ -58,6 +65,9 @@ export default defineConfig(async ({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
+    },
+    define: {
+      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBase),
     },
   };
 });

@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Plus, X } from "lucide-react";
 
-export function AdminBestSellersDialog() {
+export function AdminFeaturedCollectionDialog() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -46,17 +46,17 @@ export function AdminBestSellersDialog() {
 
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
 
-  const { data: curatedList = [] } = useQuery<Product[]>({
-    queryKey: ["curated-bestsellers"],
+  const { data: featuredList = [] } = useQuery<Product[]>({
+    queryKey: ["featured-collection"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/bestsellers`);
+      const res = await fetch(`${apiBase}/api/featured`);
       return res.json();
     },
   });
 
-  const saveCuratedMutation = useMutation({
+  const saveFeaturedMutation = useMutation({
     mutationFn: async (newIds: string[]) => {
-      const res = await authFetch("/api/bestsellers", {
+      const res = await authFetch("/api/featured", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: newIds }),
@@ -65,7 +65,7 @@ export function AdminBestSellersDialog() {
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["curated-bestsellers"] });
+      qc.invalidateQueries({ queryKey: ["featured-collection"] });
     },
   });
 
@@ -76,18 +76,18 @@ export function AdminBestSellersDialog() {
 
   const handleSlotSelect = (product: Product) => {
     if (activeSlot === null) return;
-    const currentIds = Array(5).fill(null).map((_, i) => curatedList[i]?.id || null);
+    const currentIds = Array(5).fill(null).map((_, i) => featuredList[i]?.id || null);
     currentIds[activeSlot] = product.id;
-    saveCuratedMutation.mutate(currentIds.filter(Boolean) as string[]);
+    saveFeaturedMutation.mutate(currentIds.filter(Boolean) as string[]);
     setSelectorOpen(false);
     setActiveSlot(null);
   };
 
   const handleRemoveFromSlot = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
-    const currentIds = Array(5).fill(null).map((_, i) => curatedList[i]?.id || null);
+    const currentIds = Array(5).fill(null).map((_, i) => featuredList[i]?.id || null);
     currentIds[index] = null;
-    saveCuratedMutation.mutate(currentIds.filter(Boolean) as string[]);
+    saveFeaturedMutation.mutate(currentIds.filter(Boolean) as string[]);
   };
 
   const filtered = useMemo(() => {
@@ -108,27 +108,11 @@ export function AdminBestSellersDialog() {
     return afterSub;
   }, [products, searchTerm, selectedCategory, selectedSub]);
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, isBestSeller }: { id: string; isBestSeller: boolean }) => {
-      const res = await authFetch(`/api/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isBestSeller }),
-      });
-      if (!res.ok) throw new Error("Update failed");
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-products"] });
-      qc.invalidateQueries({ queryKey: ["products"] });
-    },
-  });
-
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {Array(5).fill(null).map((_, i) => {
-          const product = curatedList[i];
+          const product = featuredList[i];
           return (
             <div 
               key={i}
@@ -252,9 +236,9 @@ export function AdminBestSellersDialog() {
                        <Button 
                          size="sm" 
                          onClick={() => handleSlotSelect(p)}
-                         disabled={curatedList.some(cp => cp?.id === p.id)}
+                         disabled={featuredList.some(cp => cp?.id === p.id)}
                        >
-                         {curatedList.some(cp => cp?.id === p.id) ? "Selected" : "Select"}
+                         {featuredList.some(cp => cp?.id === p.id) ? "Selected" : "Select"}
                        </Button>
                     </div>
                   </div>

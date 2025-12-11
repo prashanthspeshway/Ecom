@@ -20,16 +20,7 @@
       "quantity": 1
     }
   ],
-  "admin@example.com": [
-    {
-      "productId": "3",
-      "quantity": 1
-    },
-    {
-      "productId": "2",
-      "quantity": 1
-    }
-  ],
+  "admin@example.com": [],
   "user2@gmail.com": [
     {
       "productId": "2",

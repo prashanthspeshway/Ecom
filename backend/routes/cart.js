@@ -1,91 +1,102 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, getProducts, getCarts, setCarts, saveCarts }) {
+export default function register({ app, getDb, authMiddleware }) {
   const router = express.Router();
 
   router.get("/", authMiddleware, async (req, res) => {
     try {
       const db = getDb();
-      if (db) {
-        const items = await db.collection("cart").find({ user: req.user.email }).toArray();
-        const ids = items.map((i) => i.productId);
-        const productsList = await db.collection("products").find({ id: { $in: ids } }).toArray();
-        const map = new Map(productsList.map((p) => [p.id, p]));
-        const result = items.map((i) => ({ product: map.get(i.productId), quantity: i.quantity })).filter((x) => x.product);
-        return res.json(result);
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const list = Array.isArray(getCarts()[req.user.email]) ? getCarts()[req.user.email] : [];
-      const map = new Map(getProducts().map((p) => [p.id, p]));
-      const result = list.map((i) => ({ product: map.get(i.productId), quantity: i.quantity })).filter((x) => x.product);
-      res.json(result);
+
+      const items = await db.collection("cart").find({ user: req.user.email }).toArray();
+      const productIds = items.map((i) => i.productId);
+      const products = await db.collection("products").find({ id: { $in: productIds } }).toArray();
+      const pmap = new Map(products.map((p) => [p.id, p]));
+      
+      const enriched = items.map((i) => ({
+        productId: i.productId,
+        quantity: Number(i.quantity || 1),
+        product: pmap.get(i.productId) || null,
+      }));
+
+      res.json(enriched);
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[cart] Get error:", e);
+      res.status(500).json({ error: "Failed to fetch cart" });
     }
   });
 
   router.post("/", authMiddleware, async (req, res) => {
     try {
       const { productId, quantity } = req.body || {};
-      if (!productId) return res.status(400).json({ error: "productId required" });
-      const db = getDb();
-      if (db) {
-        await db.collection("cart").updateOne({ user: req.user.email, productId }, { $set: { productId, quantity: Number(quantity || 1), user: req.user.email } }, { upsert: true });
-        return res.json({ success: true });
+      if (!productId) {
+        return res.status(400).json({ error: "Product ID required" });
       }
-      const carts = getCarts();
-      const list = Array.isArray(carts[req.user.email]) ? carts[req.user.email] : [];
-      const idx = list.findIndex((i) => i.productId === productId);
-      if (idx >= 0) list[idx].quantity = Number(quantity || list[idx].quantity || 1); else list.push({ productId, quantity: Number(quantity || 1) });
-      carts[req.user.email] = list;
-      setCarts(carts);
-      saveCarts();
+
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      const qty = Number(quantity || 1);
+      const exists = await db.collection("cart").findOne({ 
+        user: req.user.email, 
+        productId 
+      });
+
+      if (exists) {
+        await db.collection("cart").updateOne(
+          { user: req.user.email, productId },
+          { $set: { quantity: qty } }
+        );
+      } else {
+        await db.collection("cart").insertOne({
+          user: req.user.email,
+          productId,
+          quantity: qty,
+        });
+      }
+
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[cart] Add error:", e);
+      res.status(500).json({ error: "Failed to add to cart" });
     }
   });
 
-  router.put("/", authMiddleware, async (req, res) => {
+  router.delete("/:productId", authMiddleware, async (req, res) => {
     try {
-      const { productId, quantity } = req.body || {};
-      if (!productId || typeof quantity !== "number") return res.status(400).json({ error: "productId, quantity required" });
+      const productId = req.params.productId;
       const db = getDb();
-      if (db) {
-        await db.collection("cart").updateOne({ user: req.user.email, productId }, { $set: { quantity } }, { upsert: true });
-        return res.json({ success: true });
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const carts = getCarts();
-      const list = Array.isArray(carts[req.user.email]) ? carts[req.user.email] : [];
-      const idx = list.findIndex((i) => i.productId === productId);
-      if (idx >= 0) list[idx].quantity = quantity; else list.push({ productId, quantity });
-      carts[req.user.email] = list;
-      setCarts(carts);
-      saveCarts();
+
+      await db.collection("cart").deleteOne({ 
+        user: req.user.email, 
+        productId 
+      });
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[cart] Delete error:", e);
+      res.status(500).json({ error: "Failed to remove from cart" });
     }
   });
 
   router.delete("/", authMiddleware, async (req, res) => {
     try {
-      const productId = (req.query.productId || "").toString();
-      const all = (req.query.all || "").toString();
       const db = getDb();
-      if (db) {
-        if (all) await db.collection("cart").deleteMany({ user: req.user.email }); else await db.collection("cart").deleteOne({ user: req.user.email, productId });
-        return res.json({ success: true });
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
       }
-      const carts = getCarts();
-      if (all) { carts[req.user.email] = []; } else {
-        const list = Array.isArray(carts[req.user.email]) ? carts[req.user.email] : [];
-        carts[req.user.email] = list.filter((i) => i.productId !== productId);
-      }
-      setCarts(carts);
-      saveCarts();
+
+      await db.collection("cart").deleteMany({ user: req.user.email });
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed" });
+      console.error("[cart] Clear error:", e);
+      res.status(500).json({ error: "Failed to clear cart" });
     }
   });
 

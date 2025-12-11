@@ -7,6 +7,7 @@ import { getProducts } from "@/lib/api";
 import { leninSubcategories } from "@/data/products";
 import type { Product } from "@/types/product";
 import { Button } from "@/components/ui/button";
+import { apiBase } from "@/lib/auth";
 import {
   Sheet,
   SheetContent,
@@ -23,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiBase } from "@/lib/auth";
 
 function FiltersPanel({
   priceRange,
@@ -74,6 +74,19 @@ function FiltersPanel({
           ))}
         </div>
       </div>
+      <div>
+        <h3 className="font-semibold mb-4">Occasion</h3>
+        <div className="space-y-3">
+          {["Wedding", "Festival", "Party", "Casual"].map((occasion) => (
+            <div key={occasion} className="flex items-center space-x-2">
+              <Checkbox id={occasion} />
+              <label htmlFor={occasion} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {occasion}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -113,7 +126,7 @@ const Products = () => {
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   const products = useMemo(() => {
     const list = (data || []).filter((p) => {
-      const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
+      const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand?.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
       const matchesCategoryParam = (() => {
         if (isNew) return true;
         if (isSale) return !!p.onSale;
@@ -136,7 +149,7 @@ const Products = () => {
     }
     
     return list;
-  }, [data, query, categoryParam, subParam, selectedCategories, priceRange, sortBy]);
+  }, [data, query, categoryParam, subParam, selectedCategories, priceRange, sortBy, isNew, isSale, isBestSeller]);
 
   const title = useMemo(() => {
     if (isNew) return "New Arrivals";
@@ -158,6 +171,7 @@ const Products = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="popularity">Popularity</SelectItem>
+              <SelectItem value="new">New Arrivals</SelectItem>
               <SelectItem value="price-low">Price: Low to High</SelectItem>
               <SelectItem value="price-high">Price: High to Low</SelectItem>
             </SelectContent>
@@ -228,16 +242,19 @@ const Products = () => {
         </div>
       )}
 
-      {displaySubcategories.length > 0 && (
+      {categoryParam?.toLowerCase() === "lenin" && (
         <div className="mb-8">
-          <h2 className="font-serif text-2xl font-bold mb-4">Explore Collection</h2>
-          <div className="flex flex-wrap gap-3">
-            {displaySubcategories.map((sub) => (
-              <Link key={sub} to={`/products?category=${encodeURIComponent(categoryParam || "")}&sub=${encodeURIComponent(sub.toLowerCase())}`}>
-                <Button variant="outline" className="rounded-full hover:bg-primary hover:text-primary-foreground transition-colors">
-                  {sub}
-                </Button>
-              </Link>
+          <h2 className="font-serif text-2xl font-bold mb-4">Explore Lenin Collections</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {leninSubcategories.map((sub) => (
+              <a key={sub.name} href={`/products?category=lenin&sub=${encodeURIComponent(sub.name.toLowerCase())}`} className="group">
+                <div className="rounded-lg bg-card p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors border">
+                  {sub.image ? (
+                    <img src={sub.image} alt={sub.name} className="w-12 h-12 rounded object-cover" />
+                  ) : null}
+                  <span className="font-medium text-sm truncate">{sub.name}</span>
+                </div>
+              </a>
             ))}
           </div>
         </div>

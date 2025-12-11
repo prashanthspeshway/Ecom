@@ -49,7 +49,8 @@
     ],
     "category": "Silk Sarees",
     "occasion": "Wedding",
-    "isBestSeller": false
+    "isBestSeller": true,
+    "onSale": false
   },
   {
     "id": "2",

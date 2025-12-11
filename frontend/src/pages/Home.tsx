@@ -19,9 +19,16 @@ const Home = () => {
     },
   });
   const { data: bestsellers = [] } = useQueryRQ<Product[]>({
-    queryKey: ["curated-bestsellers"],
+    queryKey: ["bestsellers"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/bestsellers`);
+      const res = await fetch(`${apiBase}/api/bestsellers`, { headers: {} });
+      return res.json();
+    },
+  });
+  const { data: featured = [] } = useQueryRQ<Product[]>({
+    queryKey: ["featured-collection"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/featured`);
       return res.json();
     },
   });
@@ -33,23 +40,25 @@ const Home = () => {
       <CategoryTilesSection />
 
       {/* Featured Products */}
-      <section className="py-16">
-        <div className="container px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold">
-              Featured Collection
-            </h2>
-            <Link to="/products">
-              <Button variant="outline">View All</Button>
-            </Link>
+      {featured.length > 0 && (
+        <section className="py-16">
+          <div className="container px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold">
+                Featured Collection
+              </h2>
+              <Link to="/products">
+                <Button variant="outline">View All</Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {featured.slice(0, 5).map((product) => (
+                <ProductCard key={product.id} product={product} compact />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {data?.slice(0, 5).map((product) => (
-              <ProductCard key={product.id} product={product} compact />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {banners.length > 0 && (
         <section className="py-12">
@@ -66,7 +75,7 @@ const Home = () => {
           <div className="container px-4">
             <div className="flex items-center justify-between mb-8">
               <h2 className="font-serif text-3xl md:text-4xl font-bold">Bestsellers</h2>
-              <Link to="/products?category=bestsellers">
+              <Link to="/products">
                 <Button variant="outline">View All</Button>
               </Link>
             </div>
