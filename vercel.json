@@ -3,6 +3,11 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
   "framework": null,
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -13,9 +18,8 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
 }
-
