@@ -1,31 +1,8 @@
 // Vercel serverless function entry point
-// This handler ensures the Express app is initialized before handling requests
+// Import the Express app - routes are registered synchronously
+import app from "../backend/index.js";
 
-let app = null;
-let initPromise = null;
-
-async function ensureInitialized() {
-  if (!initPromise) {
-    // Import backend which initializes the Express app
-    initPromise = import("../backend/index.js").then(async (module) => {
-      app = module.default;
-      // Give a moment for routes to be registered
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return app;
-    });
-  }
-  return initPromise;
-}
-
-export default async function handler(req, res) {
-  try {
-    await ensureInitialized();
-    if (!app) {
-      return res.status(503).json({ error: "Server initializing, please try again" });
-    }
-    return app(req, res);
-  } catch (error) {
-    console.error("[api/index] Handler error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
+// Export the Express app directly
+// Routes are registered immediately when backend/index.js is imported
+// Database connection happens asynchronously but routes handle it gracefully
+export default app;

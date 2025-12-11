@@ -27,17 +27,26 @@ import registerPages from "./routes/pages.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, ".env") });
+// Load environment variables - Vercel provides them via process.env
+// Only load .env file if it exists (for local development)
+const envPath = path.join(__dirname, ".env");
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
-// Validate required environment variables
+// Validate required environment variables (don't exit in Vercel, just log)
 if (!process.env.MONGO_URI) {
   console.error("ERROR: MONGO_URI environment variable is required");
-  process.exit(1);
+  if (!process.env.VERCEL) {
+    process.exit(1);
+  }
 }
 
 if (!process.env.JWT_SECRET) {
   console.error("ERROR: JWT_SECRET environment variable is required");
-  process.exit(1);
+  if (!process.env.VERCEL) {
+    process.exit(1);
+  }
 }
 
 const app = express();
