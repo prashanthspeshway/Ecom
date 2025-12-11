@@ -41,8 +41,8 @@ S3_ACCESS_KEY_ID=your-access-key-id
 S3_SECRET_ACCESS_KEY=your-secret-access-key
 
 # Razorpay (for payments)
-RAZORPAY_KEY_ID=rzp_test_RAcgtscfNdp1cg
-RAZORPAY_KEY_SECRET=MWn5u9N8yFYjgQpVlNvix93f
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 
 # SMTP (for email)
 SMTP_HOST=smtp.gmail.com
