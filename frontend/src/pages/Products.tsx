@@ -93,6 +93,7 @@ const Products = () => {
     queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }) 
   });
   
+  // Fetch subcategories for URL category param
   const { data: apiSubcategories = [] } = useQuery<string[]>({
     queryKey: ["subcategories", categoryParam],
     queryFn: async () => {
@@ -103,11 +104,52 @@ const Products = () => {
     enabled: !!categoryParam
   });
 
+  // Fetch subcategories for selected filter categories
+  const { data: filterSubcategories = [] } = useQuery<string[]>({
+    queryKey: ["subcategories", selectedCategories.join(",")],
+    queryFn: async () => {
+      if (selectedCategories.length === 0) return [];
+      // Fetch subcategories for all selected categories
+      const promises = selectedCategories.map(cat => 
+        fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(cat)}`).then(r => r.json())
+      );
+      const results = await Promise.all(promises);
+      // Flatten and deduplicate
+      const all = results.flat();
+      return [...new Set(all)];
+    },
+    enabled: selectedCategories.length > 0
+  });
+
   const displaySubcategories = useMemo(() => {
+    // If categories are selected from filters, show their subcategories
+    if (selectedCategories.length > 0 && filterSubcategories.length > 0) {
+      return filterSubcategories;
+    }
+    // Otherwise show subcategories for URL category param
     if (apiSubcategories.length > 0) return apiSubcategories;
     if (categoryParam?.toLowerCase() === 'lenin') return leninSubcategories.map(s => s.name);
     return [];
-  }, [apiSubcategories, categoryParam]);
+  }, [apiSubcategories, categoryParam, selectedCategories, filterSubcategories]);
+
+  // Get subcategory images from products
+  const subcategoryImages = useMemo(() => {
+    const images: Record<string, string> = {};
+    if (!data) return images;
+    
+    displaySubcategories.forEach(subName => {
+      // Find first product with this subcategory name in category
+      const product = data.find(p => 
+        p.category?.toLowerCase().includes(subName.toLowerCase()) ||
+        p.name?.toLowerCase().includes(subName.toLowerCase())
+      );
+      if (product && product.images && product.images.length > 0) {
+        images[subName] = product.images[0];
+      }
+    });
+    
+    return images;
+  }, [data, displaySubcategories]);
 
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
@@ -229,20 +271,44 @@ const Products = () => {
         </div>
       )}
 
-      {categoryParam?.toLowerCase() === "lenin" && (
+      {displaySubcategories.length > 0 && (
         <div className="mb-8">
-          <h2 className="font-serif text-2xl font-bold mb-4">Explore Lenin Collections</h2>
+          <h2 className="font-serif text-2xl font-bold mb-4">
+            {selectedCategories.length > 0 
+              ? `Explore ${selectedCategories.join(", ")} Collections`
+              : categoryParam?.toLowerCase() === "lenin" 
+                ? "Explore Lenin Collections"
+                : `Explore ${categoryParam || "Category"} Collections`}
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {leninSubcategories.map((sub) => (
-              <a key={sub.name} href={`/products?category=lenin&sub=${encodeURIComponent(sub.name.toLowerCase())}`} className="group">
-                <div className="rounded-lg bg-card p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors border">
-                  {sub.image ? (
-                    <img src={sub.image} alt={sub.name} className="w-12 h-12 rounded object-cover" />
-                  ) : null}
-                  <span className="font-medium text-sm truncate">{sub.name}</span>
-                </div>
-              </a>
-            ))}
+            {displaySubcategories.map((subName) => {
+              // Check if it's a lenin subcategory with predefined image
+              const leninSub = leninSubcategories.find(s => s.name === subName);
+              const image = leninSub?.image || subcategoryImages[subName] || "/placeholder.svg";
+              const categoryToUse = selectedCategories.length > 0 
+                ? selectedCategories[0] 
+                : categoryParam || "lenin";
+              
+              return (
+                <a 
+                  key={subName} 
+                  href={`/products?category=${encodeURIComponent(categoryToUse)}&sub=${encodeURIComponent(subName.toLowerCase())}`} 
+                  className="group"
+                >
+                  <div className="rounded-lg bg-card p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors border">
+                    <img 
+                      src={image} 
+                      alt={subName} 
+                      className="w-12 h-12 rounded object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.svg";
+                      }}
+                    />
+                    <span className="font-medium text-sm truncate">{subName}</span>
+                  </div>
+                </a>
+              );
+            })}
           </div>
         </div>
       )}

@@ -66,6 +66,42 @@ export default function register({ app, getDb, authMiddleware }) {
     }
   });
 
+  router.put("/", authMiddleware, async (req, res) => {
+    try {
+      const { productId, quantity } = req.body || {};
+      if (!productId) {
+        return res.status(400).json({ error: "Product ID required" });
+      }
+
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      // Check product stock
+      const product = await db.collection("products").findOne({ id: productId });
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const qty = Math.max(1, Math.min(Number(quantity || 1), Number(product.stock || 999)));
+      
+      const result = await db.collection("cart").updateOne(
+        { user: req.user.email, productId },
+        { $set: { quantity: qty } }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: "Cart item not found" });
+      }
+
+      res.json({ success: true, quantity: qty });
+    } catch (e) {
+      console.error("[cart] Update error:", e);
+      res.status(500).json({ error: "Failed to update cart" });
+    }
+  });
+
   router.delete("/:productId", authMiddleware, async (req, res) => {
     try {
       const productId = req.params.productId;
