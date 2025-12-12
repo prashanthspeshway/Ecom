@@ -22,10 +22,11 @@ const Account = () => {
         const res = await authFetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
-          setProfile(data as Profile);
+          // Handle both { user: {...} } and { email, name, role } formats
+          setProfile(data.user || data);
         }
       } catch (e) {
-        // no-op
+        console.error("Failed to fetch profile:", e);
       }
     })();
   }, []);

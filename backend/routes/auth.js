@@ -168,8 +168,23 @@ export default function register({ app, getDb, signToken, adminInviteCode, authM
 
   router.get("/me", authMiddleware, async (req, res) => {
     try {
-      res.json({ user: { email: req.user.email, role: req.user.role || "user" } });
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      const user = await db.collection("users").findOne({ email: req.user.email });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ 
+        email: user.email, 
+        name: user.name || user.email.split("@")[0],
+        role: user.role || "user" 
+      });
     } catch (e) {
+      console.error("[auth] Get me error:", e);
       res.status(500).json({ error: "Failed" });
     }
   });

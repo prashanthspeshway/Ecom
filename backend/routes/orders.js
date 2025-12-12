@@ -90,19 +90,28 @@ export default function register({ app, getDb, authMiddleware }) {
         };
       });
 
+      // Calculate total
+      const total = enriched.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
       const order = {
         id: crypto.randomUUID(),
         user: req.user.email,
         items: enriched,
-        status: "placed",
+        status: req.body.payment === "razorpay" ? "pending" : "placed",
         createdAt: Date.now(),
-        shipping: req.body.shipping || null,
+        shipping: req.body.address || null,
+        payment: req.body.payment || "cod",
+        total: total,
+        razorpayOrderId: req.body.razorpayOrderId || null,
+        razorpayPaymentId: req.body.razorpayPaymentId || null,
       };
 
       await db.collection("orders").insertOne(order);
       
-      // Clear cart after order creation
-      await db.collection("cart").deleteMany({ user: req.user.email });
+      // Clear cart after order creation (only if payment is COD or Razorpay payment is confirmed)
+      if (req.body.payment === "cod" || req.body.razorpayPaymentId) {
+        await db.collection("cart").deleteMany({ user: req.user.email });
+      }
 
       res.json(order);
     } catch (e) {

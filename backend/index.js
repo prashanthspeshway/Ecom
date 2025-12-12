@@ -24,6 +24,7 @@ import registerCategoryTiles from "./routes/categoryTiles.js";
 import registerCarousel from "./routes/carousel.js";
 import registerSettings from "./routes/settings.js";
 import registerPages from "./routes/pages.js";
+import registerPayment from "./routes/payment.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -623,6 +624,7 @@ registerWishlist({ app, getDb: () => db, authMiddleware });
 registerCategoryTiles({ app, getDb: () => db, authMiddleware, adminOnly });
 registerSettings({ app, getDb: () => db, authMiddleware, adminOnly });
 registerPages({ app, getDb: () => db, authMiddleware, adminOnly });
+registerPayment({ app, getDb: () => db, authMiddleware });
 
 console.log("[server] Routes registered");
 
