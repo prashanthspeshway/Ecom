@@ -30,11 +30,15 @@ function FiltersPanel({
   setPriceRange,
   selectedCategories,
   setSelectedCategories,
+  selectedSubcategories,
+  setSelectedSubcategories,
 }: {
   priceRange: number[];
   setPriceRange: (v: number[]) => void;
   selectedCategories: string[];
   setSelectedCategories: (v: string[]) => void;
+  selectedSubcategories: string[];
+  setSelectedSubcategories: (v: string[]) => void;
 }) {
   const { data: categories = [] } = useQuery<string[]>({
     queryKey: ["categories"],
@@ -42,6 +46,21 @@ function FiltersPanel({
       const res = await fetch(`${apiBase}/api/categories`);
       return res.json();
     },
+  });
+
+  // Fetch subcategories for selected categories
+  const { data: availableSubcategories = [] } = useQuery<string[]>({
+    queryKey: ["subcategories", selectedCategories.join(",")],
+    queryFn: async () => {
+      if (selectedCategories.length === 0) return [];
+      const promises = selectedCategories.map(cat => 
+        fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(cat)}`).then(r => r.json())
+      );
+      const results = await Promise.all(promises);
+      const all = results.flat();
+      return [...new Set(all)];
+    },
+    enabled: selectedCategories.length > 0
   });
 
   return (
@@ -63,8 +82,17 @@ function FiltersPanel({
                 id={category}
                 checked={selectedCategories.includes(category)}
                 onCheckedChange={(checked) => {
-                  if (checked) setSelectedCategories([...selectedCategories, category]);
-                  else setSelectedCategories(selectedCategories.filter((c) => c !== category));
+                  if (checked) {
+                    setSelectedCategories([...selectedCategories, category]);
+                  } else {
+                    setSelectedCategories(selectedCategories.filter((c) => c !== category));
+                    // Remove subcategories that belong to this category
+                    const subcatsToRemove = availableSubcategories.filter(sub => {
+                      // This is a simplified check - in reality, you'd need to track which subcategory belongs to which category
+                      return true; // For now, we'll just clear all when a category is unchecked
+                    });
+                    setSelectedSubcategories(selectedSubcategories.filter(s => !subcatsToRemove.includes(s)));
+                  }
                 }}
               />
               <label htmlFor={category} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -74,6 +102,31 @@ function FiltersPanel({
           ))}
         </div>
       </div>
+      {selectedCategories.length > 0 && availableSubcategories.length > 0 && (
+        <div>
+          <h3 className="font-semibold mb-4">Subcategory</h3>
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {availableSubcategories.map((subcategory) => (
+              <div key={subcategory} className="flex items-center space-x-2">
+                <Checkbox
+                  id={subcategory}
+                  checked={selectedSubcategories.includes(subcategory)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedSubcategories([...selectedSubcategories, subcategory]);
+                    } else {
+                      setSelectedSubcategories(selectedSubcategories.filter((s) => s !== subcategory));
+                    }
+                  }}
+                />
+                <label htmlFor={subcategory} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  {subcategory}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -81,6 +134,7 @@ function FiltersPanel({
 const Products = () => {
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("popularity");
   const location = useLocation();
   const categoryParam = useMemo(() => new URLSearchParams(location.search).get("category"), [location.search]);
@@ -93,44 +147,12 @@ const Products = () => {
     queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }) 
   });
   
-  // Fetch subcategories for URL category param
-  const { data: apiSubcategories = [] } = useQuery<string[]>({
-    queryKey: ["subcategories", categoryParam],
-    queryFn: async () => {
-      if (!categoryParam) return [];
-      const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(categoryParam)}`);
-      return res.json();
-    },
-    enabled: !!categoryParam
-  });
-
-  // Fetch subcategories for selected filter categories
-  const { data: filterSubcategories = [] } = useQuery<string[]>({
-    queryKey: ["subcategories", selectedCategories.join(",")],
-    queryFn: async () => {
-      if (selectedCategories.length === 0) return [];
-      // Fetch subcategories for all selected categories
-      const promises = selectedCategories.map(cat => 
-        fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(cat)}`).then(r => r.json())
-      );
-      const results = await Promise.all(promises);
-      // Flatten and deduplicate
-      const all = results.flat();
-      return [...new Set(all)];
-    },
-    enabled: selectedCategories.length > 0
-  });
-
-  const displaySubcategories = useMemo(() => {
-    // If categories are selected from filters, show ALL their subcategories
-    if (selectedCategories.length > 0 && filterSubcategories.length > 0) {
-      return filterSubcategories;
+  // Initialize categories from URL param if present
+  useEffect(() => {
+    if (categoryParam && !selectedCategories.includes(categoryParam)) {
+      setSelectedCategories([categoryParam]);
     }
-    // Otherwise show subcategories for URL category param
-    if (apiSubcategories.length > 0) return apiSubcategories;
-    if (categoryParam?.toLowerCase() === 'lenin') return leninSubcategories.map(s => s.name);
-    return [];
-  }, [apiSubcategories, categoryParam, selectedCategories, filterSubcategories]);
+  }, [categoryParam]);
 
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
@@ -142,14 +164,24 @@ const Products = () => {
         if (isSale) return !!p.onSale;
         if (isBestSeller) return !!p.isBestSeller;
         if (subParam) return p.category.toLowerCase().includes(subParam.toLowerCase());
-        if (categoryParam) return p.category.toLowerCase().includes(categoryParam.toLowerCase());
+        if (categoryParam && selectedCategories.length === 0) {
+          // If URL has category param but no filter selection, use URL param
+          return p.category.toLowerCase().includes(categoryParam.toLowerCase());
+        }
         return true;
       })();
+      
+      // Match selected categories - show products from ANY selected category
       const matchesCategorySelection = selectedCategories.length
         ? selectedCategories.some((c) => p.category.toLowerCase().includes(c.toLowerCase()))
         : true;
+      
+      // Match selected subcategories - if subcategories are selected, filter by them
+      const matchesSubcategorySelection = selectedSubcategories.length
+        ? selectedSubcategories.some((s) => p.category.toLowerCase().includes(s.toLowerCase()))
+        : true;
       const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
-      return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesPrice;
+      return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesSubcategorySelection && matchesPrice;
     });
 
     if (sortBy === "price-low") {
@@ -159,7 +191,7 @@ const Products = () => {
     }
     
     return list;
-  }, [data, query, categoryParam, subParam, selectedCategories, priceRange, sortBy, isNew, isSale, isBestSeller]);
+  }, [data, query, categoryParam, subParam, selectedCategories, selectedSubcategories, priceRange, sortBy, isNew, isSale, isBestSeller]);
 
   const title = useMemo(() => {
     if (isNew) return "New Arrivals";
@@ -204,6 +236,8 @@ const Products = () => {
                     setPriceRange={setPriceRange}
                     selectedCategories={selectedCategories}
                     setSelectedCategories={setSelectedCategories}
+                    selectedSubcategories={selectedSubcategories}
+                    setSelectedSubcategories={setSelectedSubcategories}
                   />
                 </div>
               </SheetContent>
@@ -221,67 +255,54 @@ const Products = () => {
               setPriceRange={setPriceRange}
               selectedCategories={selectedCategories}
               setSelectedCategories={setSelectedCategories}
+              selectedSubcategories={selectedSubcategories}
+              setSelectedSubcategories={setSelectedSubcategories}
             />
             <Button className="w-full mt-6" variant="secondary">Apply Filters</Button>
           </div>
         </aside>
         <div>
 
-      {selectedCategories.length > 0 && (
+      {(selectedCategories.length > 0 || selectedSubcategories.length > 0) && (
         <div className="flex flex-wrap gap-2 mb-6">
           {selectedCategories.map((category) => (
             <Button
               key={category}
               variant="secondary"
               size="sm"
-              onClick={() =>
-                setSelectedCategories(selectedCategories.filter((c) => c !== category))
-              }
+              onClick={() => {
+                setSelectedCategories(selectedCategories.filter((c) => c !== category));
+                // Clear subcategories when category is removed
+                setSelectedSubcategories([]);
+              }}
             >
               {category}
+              <X className="h-3 w-3 ml-2" />
+            </Button>
+          ))}
+          {selectedSubcategories.map((subcategory) => (
+            <Button
+              key={subcategory}
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                setSelectedSubcategories(selectedSubcategories.filter((s) => s !== subcategory))
+              }
+            >
+              {subcategory}
               <X className="h-3 w-3 ml-2" />
             </Button>
           ))}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setSelectedCategories([])}
+            onClick={() => {
+              setSelectedCategories([]);
+              setSelectedSubcategories([]);
+            }}
           >
             Clear all
           </Button>
-        </div>
-      )}
-
-      {displaySubcategories.length > 0 && (
-        <div className="mb-6 -mt-4">
-          <div className="flex flex-wrap gap-2">
-            <a 
-              href={`/products?category=${encodeURIComponent(selectedCategories.length > 0 ? selectedCategories[0] : categoryParam || "lenin")}`}
-              className="group"
-            >
-              <div className={`rounded-md bg-card px-3 py-1.5 text-center hover:bg-accent/10 transition-colors border text-xs font-medium ${!subParam ? 'bg-primary text-primary-foreground' : ''}`}>
-                All
-              </div>
-            </a>
-            {displaySubcategories.map((subName) => {
-              const categoryToUse = selectedCategories.length > 0 
-                ? selectedCategories[0] 
-                : categoryParam || "lenin";
-              const isActive = subParam?.toLowerCase() === subName.toLowerCase();
-              
-              return (
-                <a 
-                  key={subName} 
-                  href={`/products?category=${encodeURIComponent(categoryToUse)}&sub=${encodeURIComponent(subName.toLowerCase())}`} 
-                  className="group"
-                >
-                  <div className={`rounded-md bg-card px-3 py-1.5 text-center hover:bg-accent/10 transition-colors border text-xs font-medium ${isActive ? 'bg-primary text-primary-foreground' : ''}`}>
-                    {subName}
-                  </div>
-                </a>
-              );
-            })}
-          </div>
         </div>
       )}
 
