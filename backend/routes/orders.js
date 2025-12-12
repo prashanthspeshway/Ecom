@@ -46,6 +46,35 @@ export default function register({ app, getDb, authMiddleware }) {
     }
   });
 
+  router.put("/", authMiddleware, async (req, res) => {
+    try {
+      const db = getDb();
+      if (!db) {
+        return res.status(503).json({ error: "Database unavailable" });
+      }
+
+      // Update order with payment details
+      if (req.body.razorpayOrderId && req.body.razorpayPaymentId) {
+        await db.collection("orders").updateOne(
+          { razorpayOrderId: req.body.razorpayOrderId, user: req.user.email },
+          {
+            $set: {
+              razorpayPaymentId: req.body.razorpayPaymentId,
+              status: "placed",
+            },
+          }
+        );
+        res.json({ success: true });
+        return;
+      }
+
+      res.status(400).json({ error: "Invalid update request" });
+    } catch (e) {
+      console.error("[orders] Update error:", e);
+      res.status(500).json({ error: "Failed to update order" });
+    }
+  });
+
   router.post("/", authMiddleware, async (req, res) => {
     try {
       const db = getDb();
