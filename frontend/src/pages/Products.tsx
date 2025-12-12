@@ -74,19 +74,6 @@ function FiltersPanel({
           ))}
         </div>
       </div>
-      <div>
-        <h3 className="font-semibold mb-4">Occasion</h3>
-        <div className="space-y-3">
-          {["Wedding", "Festival", "Party", "Casual"].map((occasion) => (
-            <div key={occasion} className="flex items-center space-x-2">
-              <Checkbox id={occasion} />
-              <label htmlFor={occasion} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {occasion}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

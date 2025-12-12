@@ -74,6 +74,8 @@ export function updateQuantity(productId: string, quantity: number) {
   if (idx >= 0) {
     items[idx].quantity = Math.max(1, quantity);
     write(items);
+    // Dispatch event to update UI
+    window.dispatchEvent(new CustomEvent("cart:update"));
     if (token) {
       authFetch("/api/cart", {
         method: "PUT",

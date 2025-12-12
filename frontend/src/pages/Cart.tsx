@@ -53,11 +53,36 @@ const Cart = () => {
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center border rounded-lg">
-                  <Button variant="ghost" size="sm" onClick={() => { updateQuantity(product.id, Math.max(1, quantity - 1)); }}>-</Button>
-                  <span className="px-4 py-2">{quantity}</span>
-                  <Button variant="ghost" size="sm" onClick={() => { updateQuantity(product.id, quantity + 1); }}>+</Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => { 
+                      updateQuantity(product.id, Math.max(1, quantity - 1)); 
+                      setCartItems(getCart());
+                    }}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="px-4 py-2 min-w-[3rem] text-center">{quantity}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => { 
+                      updateQuantity(product.id, quantity + 1); 
+                      setCartItems(getCart());
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => { removeFromCart(product.id); }}>
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  onClick={() => { 
+                    removeFromCart(product.id); 
+                    setCartItems(getCart());
+                  }}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -87,12 +112,6 @@ const Cart = () => {
               </div>
             </div>
 
-            <div className="space-y-3 mb-6">
-              <Input placeholder="Enter promo code" />
-              <Button variant="outline" className="w-full">
-                Apply Code
-              </Button>
-            </div>
 
             <Link to="/checkout">
               <Button size="lg" className="w-full">
