@@ -109,7 +109,7 @@ const Checkout = () => {
               if (verifyRes.ok) {
                 // Update order with payment ID
                 await authFetch("/api/orders", {
-                  method: "POST",
+                  method: "PUT",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     razorpayOrderId: response.razorpay_order_id,
