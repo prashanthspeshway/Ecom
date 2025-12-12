@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Filter, X } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
