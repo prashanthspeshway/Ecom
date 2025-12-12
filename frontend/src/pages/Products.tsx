@@ -253,19 +253,21 @@ const Products = () => {
       )}
 
       {displaySubcategories.length > 0 && (
-        <div className="mb-8">
-          <h2 className="font-serif text-2xl font-bold mb-4">
-            {selectedCategories.length > 0 
-              ? `Explore ${selectedCategories.join(", ")} Collections`
-              : categoryParam?.toLowerCase() === "lenin" 
-                ? "Explore Lenin Collections"
-                : `Explore ${categoryParam || "Category"} Collections`}
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="mb-6 -mt-4">
+          <div className="flex flex-wrap gap-2">
+            <a 
+              href={`/products?category=${encodeURIComponent(selectedCategories.length > 0 ? selectedCategories[0] : categoryParam || "lenin")}`}
+              className="group"
+            >
+              <div className={`rounded-md bg-card px-3 py-1.5 text-center hover:bg-accent/10 transition-colors border text-xs font-medium ${!subParam ? 'bg-primary text-primary-foreground' : ''}`}>
+                All
+              </div>
+            </a>
             {displaySubcategories.map((subName) => {
               const categoryToUse = selectedCategories.length > 0 
                 ? selectedCategories[0] 
                 : categoryParam || "lenin";
+              const isActive = subParam?.toLowerCase() === subName.toLowerCase();
               
               return (
                 <a 
@@ -273,8 +275,8 @@ const Products = () => {
                   href={`/products?category=${encodeURIComponent(categoryToUse)}&sub=${encodeURIComponent(subName.toLowerCase())}`} 
                   className="group"
                 >
-                  <div className="rounded-lg bg-card p-3 text-center hover:bg-accent/10 transition-colors border">
-                    <span className="font-medium text-sm">{subName}</span>
+                  <div className={`rounded-md bg-card px-3 py-1.5 text-center hover:bg-accent/10 transition-colors border text-xs font-medium ${isActive ? 'bg-primary text-primary-foreground' : ''}`}>
+                    {subName}
                   </div>
                 </a>
               );
