@@ -282,9 +282,6 @@ const Products = () => {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {displaySubcategories.map((subName) => {
-              // Check if it's a lenin subcategory with predefined image
-              const leninSub = leninSubcategories.find(s => s.name === subName);
-              const image = leninSub?.image || subcategoryImages[subName] || "/placeholder.svg";
               const categoryToUse = selectedCategories.length > 0 
                 ? selectedCategories[0] 
                 : categoryParam || "lenin";
@@ -295,16 +292,8 @@ const Products = () => {
                   href={`/products?category=${encodeURIComponent(categoryToUse)}&sub=${encodeURIComponent(subName.toLowerCase())}`} 
                   className="group"
                 >
-                  <div className="rounded-lg bg-card p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors border">
-                    <img 
-                      src={image} 
-                      alt={subName} 
-                      className="w-12 h-12 rounded object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.svg";
-                      }}
-                    />
-                    <span className="font-medium text-sm truncate">{subName}</span>
+                  <div className="rounded-lg bg-card p-3 text-center hover:bg-accent/10 transition-colors border">
+                    <span className="font-medium text-sm">{subName}</span>
                   </div>
                 </a>
               );
