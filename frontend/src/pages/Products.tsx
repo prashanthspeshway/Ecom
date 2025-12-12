@@ -122,7 +122,7 @@ const Products = () => {
   });
 
   const displaySubcategories = useMemo(() => {
-    // If categories are selected from filters, show their subcategories
+    // If categories are selected from filters, show ALL their subcategories
     if (selectedCategories.length > 0 && filterSubcategories.length > 0) {
       return filterSubcategories;
     }
@@ -131,25 +131,6 @@ const Products = () => {
     if (categoryParam?.toLowerCase() === 'lenin') return leninSubcategories.map(s => s.name);
     return [];
   }, [apiSubcategories, categoryParam, selectedCategories, filterSubcategories]);
-
-  // Get subcategory images from products
-  const subcategoryImages = useMemo(() => {
-    const images: Record<string, string> = {};
-    if (!data) return images;
-    
-    displaySubcategories.forEach(subName => {
-      // Find first product with this subcategory name in category
-      const product = data.find(p => 
-        p.category?.toLowerCase().includes(subName.toLowerCase()) ||
-        p.name?.toLowerCase().includes(subName.toLowerCase())
-      );
-      if (product && product.images && product.images.length > 0) {
-        images[subName] = product.images[0];
-      }
-    });
-    
-    return images;
-  }, [data, displaySubcategories]);
 
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
