@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,10 @@ const AdminOrders = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Manage Orders - Admin | Saree Elegance</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">Orders</h1>
         <div className="flex items-center gap-2">

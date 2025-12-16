@@ -3,6 +3,7 @@ export interface Product {
   name: string;
   brand: string;
   images: string[];
+  imageAltTags?: string[];
   price: number;
   originalPrice?: number;
   discount?: number;

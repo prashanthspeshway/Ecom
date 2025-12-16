@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ImagePlus, Star } from "lucide-react";
@@ -80,6 +81,11 @@ const OrderTracking = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Order #{order.id} - Track Your Order | Saree Elegance</title>
+        <meta name="description" content={`Track your order #${order.id} and view its current status and delivery progress.`} />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-serif text-2xl md:text-3xl font-bold">Order #{order.id}</h1>
         <div className="text-sm text-muted-foreground">{new Date(order.createdAt || Date.now()).toLocaleString()}</div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +63,10 @@ const ResetPassword = () => {
   if (success) {
     return (
       <div className="container px-4 py-8">
+        <Helmet>
+          <title>Password Reset Successful - Saree Elegance</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
           <h1 className="font-serif text-3xl font-bold">Password Reset Successful</h1>
           <p className="text-muted-foreground">
@@ -78,6 +83,10 @@ const ResetPassword = () => {
   if (!token) {
     return (
       <div className="container px-4 py-8">
+        <Helmet>
+          <title>Invalid Reset Link - Saree Elegance</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
           <h1 className="font-serif text-3xl font-bold">Invalid Reset Link</h1>
           <p className="text-destructive">{error}</p>
@@ -91,6 +100,11 @@ const ResetPassword = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Reset Password - Saree Elegance</title>
+        <meta name="description" content="Enter your new password to complete the password reset process." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
         <h1 className="font-serif text-3xl font-bold">Reset Password</h1>
         {error && <p className="text-destructive">{error}</p>}
@@ -152,4 +166,6 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
+
+
 

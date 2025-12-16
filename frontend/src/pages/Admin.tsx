@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
@@ -81,6 +82,8 @@ const Admin = () => {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null]);
   const [filePickerIndex, setFilePickerIndex] = useState<number | null>(null);
+  const [mainImageAlt, setMainImageAlt] = useState<string>("");
+  const [imageAlts, setImageAlts] = useState<string[]>(["", "", "", "", ""]);
   
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
   const [colorItems, setColorItems] = useState<{ file: File | null; imageUrl?: string; url: string }[]>([]);
@@ -154,6 +157,19 @@ const Admin = () => {
       const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
       const urls = [] as string[];
       const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
+      
+      // Build alt tags array matching images array
+      const altTagsArray: string[] = [];
+      if (firstImage) {
+        altTagsArray.push(mainImageAlt.trim() || form.name);
+      }
+      uploaded.forEach((_, idx) => {
+        altTagsArray.push(imageAlts[idx]?.trim() || form.name);
+      });
+      urls.forEach(() => {
+        altTagsArray.push(form.name);
+      });
+      
       const colorLinks = colorItems
         .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
         .filter((ci) => ci.file || ci.imageUrl);
@@ -176,6 +192,7 @@ const Admin = () => {
         name: form.name,
         price: Number(form.price),
         images: imagesArray,
+        imageAltTags: altTagsArray.length > 0 ? altTagsArray : undefined,
         stock: Number(form.stock || 0),
         category: selectedSub || form.category,
         originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
@@ -190,6 +207,8 @@ const Admin = () => {
       setSelectedPreviewIndex(0);
       setFilePickerIndex(null);
       setColorItems([]);
+      setMainImageAlt("");
+      setImageAlts(["", "", "", "", ""]);
       const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
       if (thumbEl) thumbEl.value = "";
       const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
@@ -545,6 +564,10 @@ const Admin = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Admin Panel - Saree Elegance</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">Admin Panel</h1>
         <div className="flex items-center gap-2">
@@ -638,7 +661,7 @@ const Admin = () => {
                     <button
                       type="button"
                       className="absolute top-1 right-1 bg-background/70 rounded-md p-1"
-                      onClick={(e) => { e.stopPropagation(); setThumbnailFile(null); }}
+                      onClick={(e) => { e.stopPropagation(); setThumbnailFile(null); setMainImageAlt(""); }}
                       aria-label="Remove"
                     >
                       <X className="h-3 w-3" />
@@ -658,6 +681,20 @@ const Admin = () => {
                   setThumbnailFile(f);
                 }}
               />
+            </div>
+            <div className="mt-2">
+              <Label htmlFor="main-image-alt" className="text-xs text-muted-foreground">Alt Text (for SEO)</Label>
+              <Input
+                id="main-image-alt"
+                placeholder="e.g., Elegant red silk saree with golden embroidery"
+                value={mainImageAlt}
+                onChange={(e) => setMainImageAlt(e.target.value)}
+                className="mt-1"
+                disabled={!thumbnailFile && !form.images.trim()}
+              />
+              {!thumbnailFile && !form.images.trim() && (
+                <p className="text-xs text-muted-foreground mt-1">Upload an image first to add alt text</p>
+              )}
             </div>
           </div>
           <div>
@@ -680,7 +717,7 @@ const Admin = () => {
                       <button
                         type="button"
                         className="absolute top-1 right-1 bg-background/70 rounded-md p-1"
-                        onClick={(e) => { e.stopPropagation(); const next = [...files]; next[i] = null; setFiles(next); }}
+                        onClick={(e) => { e.stopPropagation(); const next = [...files]; next[i] = null; setFiles(next); const nextAlts = [...imageAlts]; nextAlts[i] = ""; setImageAlts(nextAlts); }}
                         aria-label="Remove"
                       >
                         <X className="h-3 w-3" />
@@ -705,6 +742,28 @@ const Admin = () => {
                   setFilePickerIndex(null);
                 }}
               />
+            </div>
+            <div className="mt-3 space-y-2">
+              <Label className="text-xs text-muted-foreground">Alt Text for Images (for SEO)</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[0,1,2,3,4].map((i) => (
+                  <div key={i}>
+                    <Label htmlFor={`image-alt-${i}`} className="text-xs">Image {i + 1} {files[i] ? "" : "(not uploaded)"}</Label>
+                    <Input
+                      id={`image-alt-${i}`}
+                      placeholder={files[i] ? `e.g., ${form.name || "Product"} - view ${i + 1}` : "Upload image first to add alt text"}
+                      value={imageAlts[i] || ""}
+                      onChange={(e) => {
+                        const next = [...imageAlts];
+                        next[i] = e.target.value;
+                        setImageAlts(next);
+                      }}
+                      className="mt-1"
+                      disabled={!files[i]}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <div className="space-y-3">

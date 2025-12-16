@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -185,6 +186,11 @@ const Checkout = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Checkout - Saree Elegance</title>
+        <meta name="description" content="Complete your purchase. Secure checkout with multiple payment options including Razorpay." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <h1 className="font-serif text-3xl md:text-4xl font-bold mb-8">Checkout</h1>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -257,7 +263,7 @@ const Checkout = () => {
             <div className="space-y-3 mb-4">
               {items.map((it, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  <img src={(it.product.images || ["/placeholder.svg"])[0]} alt={it.product.name} className="w-14 h-14 rounded object-cover" />
+                  <img src={(it.product.images || ["/placeholder.svg"])[0]} alt={it.product.imageAltTags?.[0] || it.product.name} className="w-14 h-14 rounded object-cover" />
                   <div className="flex-1">
                     <div className="text-sm font-medium">{it.product.name}</div>
                     <div className="text-xs text-muted-foreground">Qty: {it.quantity}</div>

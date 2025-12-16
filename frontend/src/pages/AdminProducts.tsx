@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,6 +168,10 @@ const AdminProducts = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Manage Products - Admin | Saree Elegance</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">Manage Products</h1>
         <div className="flex items-center gap-2">
@@ -255,7 +260,7 @@ const AdminProducts = () => {
             <div key={p.id} className="border rounded-lg p-4 relative">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.name} className="w-20 h-20 rounded-md object-cover border" />
+                  <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.imageAltTags?.[0] || p.name} className="w-20 h-20 rounded-md object-cover border" />
                   <div>
                     <p className="font-semibold">{p.name}</p>
                     <div className="flex gap-2 flex-wrap">

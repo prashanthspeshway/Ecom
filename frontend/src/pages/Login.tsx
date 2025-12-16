@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,11 @@ const Login = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Login - Saree Elegance</title>
+        <meta name="description" content="Login to your Saree Elegance account to access your orders, wishlist, and account settings." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
         <h1 className="font-serif text-3xl font-bold">Login</h1>
         {error && <p className="text-destructive">{error}</p>}

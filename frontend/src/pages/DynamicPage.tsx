@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { apiBase } from "@/lib/auth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +50,16 @@ const DynamicPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <Helmet>
+        <title>{page.title} | Saree Elegance</title>
+        <meta name="description" content={page.content.substring(0, 160).replace(/<[^>]*>/g, "")} />
+        <meta property="og:title" content={page.title} />
+        <meta property="og:description" content={page.content.substring(0, 200).replace(/<[^>]*>/g, "")} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://ecom-one-wheat.vercel.app/pages/${page.slug}`} />
+        {page.images?.[0] && <meta property="og:image" content={page.images[0]} />}
+        <link rel="canonical" href={`https://ecom-one-wheat.vercel.app/pages/${page.slug}`} />
+      </Helmet>
       <h1 className="text-4xl font-serif font-bold mb-8 text-center">{page.title}</h1>
       
       {page.images && page.images.length > 0 && (
@@ -70,4 +81,6 @@ const DynamicPage = () => {
 };
 
 export default DynamicPage;
+
+
 

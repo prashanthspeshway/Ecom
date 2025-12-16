@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,6 +137,10 @@ const AdminSupport = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Support Pages - Admin | Saree Elegance</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="font-serif text-3xl font-bold">Footer Pages</h1>
@@ -264,4 +269,6 @@ const AdminSupport = () => {
 };
 
 export default AdminSupport;
+
+
 

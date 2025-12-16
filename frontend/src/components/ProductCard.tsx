@@ -23,7 +23,7 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
         <div className={`relative overflow-hidden rounded-lg bg-card ${compact ? "aspect-[3/4]" : "aspect-square"} mb-3`}>
           <img
             src={(product.images?.[0] && !String(product.images?.[0]).startsWith("blob:")) ? product.images![0] : "/placeholder.svg"}
-            alt={product.name}
+            alt={product.imageAltTags?.[0] || product.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           {product.onSale && (

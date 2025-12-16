@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,11 @@ const Register = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Create Account - Saree Elegance</title>
+        <meta name="description" content="Create a new account with Saree Elegance to start shopping premium Indian sarees and traditional wear." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
         <h1 className="font-serif text-3xl font-bold">Register</h1>
         {error && <p className="text-destructive">{error}</p>}

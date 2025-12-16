@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,10 @@ const ForgotPassword = () => {
   if (success) {
     return (
       <div className="container px-4 py-8">
+        <Helmet>
+          <title>Check Your Email - Saree Elegance</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
           <h1 className="font-serif text-3xl font-bold">Check your email</h1>
           <p className="text-muted-foreground">
@@ -52,6 +57,11 @@ const ForgotPassword = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Forgot Password - Saree Elegance</title>
+        <meta name="description" content="Reset your password by entering your email address. We'll send you a password reset link." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-md mx-auto bg-card rounded-lg p-6 space-y-4">
         <h1 className="font-serif text-3xl font-bold">Forgot Password</h1>
         <p className="text-muted-foreground">

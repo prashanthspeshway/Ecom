@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Filter, X } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { useQuery } from "@tanstack/react-query";
@@ -204,6 +205,18 @@ const Products = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>{title} | Saree Elegance</title>
+        <meta name="description" content={`Browse our collection of ${title.toLowerCase()}. Find premium quality sarees, traditional wear, and designer ethnic fashion at Saree Elegance.`} />
+        <meta name="keywords" content={`${title}, sarees, indian sarees, designer sarees, traditional wear, ethnic fashion, online shopping`} />
+        <meta property="og:title" content={`${title} - Saree Elegance`} />
+        <meta property="og:description" content={`Browse our collection of ${title.toLowerCase()} at Saree Elegance.`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://ecom-one-wheat.vercel.app/products${location.search}`} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={`${title} - Saree Elegance`} />
+        <link rel="canonical" href={`https://ecom-one-wheat.vercel.app/products${location.search}`} />
+      </Helmet>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">{title}</h1>
         <div className="flex items-center gap-4">

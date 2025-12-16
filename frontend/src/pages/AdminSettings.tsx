@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +106,10 @@ const AdminSettings = () => {
 
   return (
     <div className="container px-4 py-8">
+      <Helmet>
+        <title>Settings - Admin | Saree Elegance</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-4xl mx-auto">
         <h1 className="font-serif text-3xl font-bold mb-8">Settings</h1>
 
@@ -240,4 +245,6 @@ const AdminSettings = () => {
 };
 
 export default AdminSettings;
+
+
 

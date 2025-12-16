@@ -126,7 +126,7 @@ export function AdminFeaturedCollectionDialog() {
                 <>
                   <img 
                     src={(product.images?.[0] && !String(product.images?.[0]).startsWith("blob:")) ? product.images![0] : "/placeholder.svg"} 
-                    alt={product.name} 
+                    alt={product.imageAltTags?.[0] || product.name} 
                     className="w-full h-full object-cover rounded-md" 
                   />
                   <button 
@@ -256,4 +256,6 @@ export function AdminFeaturedCollectionDialog() {
     </div>
   );
 }
+
+
 
