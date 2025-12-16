@@ -143,17 +143,19 @@ const Products = () => {
   const isSale = categoryParam === "sale";
   const isBestSeller = categoryParam === "bestsellers";
   
-  const { data } = useQuery<Product[]>({ 
+  const { data, isLoading, error } = useQuery<Product[]>({ 
     queryKey: ["products", { new: isNew, sale: isSale, bestseller: isBestSeller }], 
-    queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }) 
+    queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }),
+    retry: 2,
+    refetchOnWindowFocus: false
   });
   
   // Initialize categories from URL param if present
   useEffect(() => {
-    if (categoryParam && !selectedCategories.includes(categoryParam)) {
+    if (categoryParam && categoryParam !== "new" && categoryParam !== "sale" && categoryParam !== "bestsellers" && !selectedCategories.includes(categoryParam)) {
       setSelectedCategories([categoryParam]);
     }
-  }, [categoryParam]);
+  }, [categoryParam, selectedCategories]);
 
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
@@ -319,11 +321,45 @@ const Products = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} compact />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <p className="text-destructive mb-4">Failed to load products. Please try again.</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">No products found.</p>
+            {(selectedCategories.length > 0 || selectedSubcategories.length > 0 || priceRange[0] > 0 || priceRange[1] < 30000) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedCategories([]);
+                  setSelectedSubcategories([]);
+                  setPriceRange([0, 30000]);
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} compact />
+          ))}
+        </div>
+      )}
         </div>
       </div>
     </div>
