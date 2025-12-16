@@ -75,15 +75,26 @@ const OrderTracking = () => {
       </div>
     );
   }
-  if (!order) return (<div className="container px-4 py-8"><p>Loading...</p></div>);
+  if (!order) {
+    return (
+      <div className="container px-4 py-8">
+        <Helmet>
+          <title>Loading Order - Saree Elegance</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   const total = (order.items || []).reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 0), 0);
+  const orderId = order.id || "Unknown";
 
   return (
     <div className="container px-4 py-8">
       <Helmet>
-        <title>Order #{order.id} - Track Your Order | Saree Elegance</title>
-        <meta name="description" content={`Track your order #${order.id} and view its current status and delivery progress.`} />
+        <title>{`Order #${orderId} - Track Your Order | Saree Elegance`}</title>
+        <meta name="description" content={`Track your order #${orderId} and view its current status and delivery progress.`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <div className="flex items-center justify-between mb-4">

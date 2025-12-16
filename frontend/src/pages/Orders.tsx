@@ -44,7 +44,7 @@ const Orders = () => {
   return (
     <div className="container px-4 py-16">
       <Helmet>
-        <title>My Orders ({orders.length}) - Saree Elegance</title>
+        <title>{`My Orders (${orders.length}) - Saree Elegance`}</title>
         <meta name="description" content={`View your ${orders.length} order(s) and track their status.`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>

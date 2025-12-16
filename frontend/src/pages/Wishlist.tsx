@@ -54,7 +54,7 @@ const Wishlist = () => {
   return (
     <div className="container px-4 py-8">
       <Helmet>
-        <title>My Wishlist ({items.length} items) - Saree Elegance</title>
+        <title>{`My Wishlist (${items.length} items) - Saree Elegance`}</title>
         <meta name="description" content={`Your wishlist contains ${items.length} saved item(s).`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>

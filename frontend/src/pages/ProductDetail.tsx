@@ -66,24 +66,25 @@ const ProductDetail = () => {
   const images = (product?.images || []).filter((u) => typeof u === "string" && u && !u.startsWith("blob:"));
 
   const productImage = product.images?.[0] || "/placeholder.svg";
-  const productPrice = product.originalPrice || product.price;
-  const productDescription = product.details || product.descriptionSections?.productSpecifications || `${product.name} - Premium quality ${product.category} saree. ${product.fabrics?.join(", ") || ""}`;
+  const productPrice = product.originalPrice || product.price || 0;
+  const productName = product.name || "Product";
+  const productDescription = product.details || product.descriptionSections?.productSpecifications || `${productName} - Premium quality ${product.category || ""} saree. ${product.fabrics?.join(", ") || ""}`;
 
   return (
     <div>
       <Helmet>
-        <title>{product.name} - ₹{product.price.toLocaleString()} | Saree Elegance</title>
+        <title>{`${productName} - ₹${productPrice.toLocaleString()} | Saree Elegance`}</title>
         <meta name="description" content={productDescription.substring(0, 160)} />
-        <meta name="keywords" content={`${product.name}, ${product.category}, ${product.fabrics?.join(", ") || ""}, saree, indian saree, designer saree`} />
-        <meta property="og:title" content={`${product.name} - Saree Elegance`} />
+        <meta name="keywords" content={`${productName}, ${product.category || ""}, ${product.fabrics?.join(", ") || ""}, saree, indian saree, designer saree`} />
+        <meta property="og:title" content={`${productName} - Saree Elegance`} />
         <meta property="og:description" content={productDescription.substring(0, 200)} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={`https://ecom-one-wheat.vercel.app/product/${product.id}`} />
         <meta property="og:image" content={productImage} />
-        <meta property="product:price:amount" content={productPrice.toString()} />
+        <meta property="product:price:amount" content={String(productPrice)} />
         <meta property="product:price:currency" content="INR" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={product.name} />
+        <meta name="twitter:title" content={productName} />
         <meta name="twitter:description" content={productDescription.substring(0, 200)} />
         <meta name="twitter:image" content={productImage} />
         <link rel="canonical" href={`https://ecom-one-wheat.vercel.app/product/${product.id}`} />

@@ -44,7 +44,7 @@ const Cart = () => {
   return (
     <div className="container px-4 py-8">
       <Helmet>
-        <title>Shopping Cart ({cartItems.length} items) - Saree Elegance</title>
+        <title>{`Shopping Cart (${cartItems.length} items) - Saree Elegance`}</title>
         <meta name="description" content={`Your shopping cart contains ${cartItems.length} item(s). Review your selection and proceed to checkout.`} />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>

@@ -238,25 +238,28 @@ const Products = () => {
     return "Shop Sarees";
   }, [isNew, isSale, isBestSeller, categoryParam]);
 
+  // Ensure title is always a string
+  const safeTitle = String(title || "Shop Sarees");
+
   // Ensure we always have a valid products array
   const safeProducts = Array.isArray(products) ? products : [];
 
   return (
     <div className="container px-4 py-8">
       <Helmet>
-        <title>{title} | Saree Elegance</title>
-        <meta name="description" content={`Browse our collection of ${title.toLowerCase()}. Find premium quality sarees, traditional wear, and designer ethnic fashion at Saree Elegance.`} />
-        <meta name="keywords" content={`${title}, sarees, indian sarees, designer sarees, traditional wear, ethnic fashion, online shopping`} />
-        <meta property="og:title" content={`${title} - Saree Elegance`} />
-        <meta property="og:description" content={`Browse our collection of ${title.toLowerCase()} at Saree Elegance.`} />
+        <title>{`${safeTitle} | Saree Elegance`}</title>
+        <meta name="description" content={`Browse our collection of ${safeTitle.toLowerCase()}. Find premium quality sarees, traditional wear, and designer ethnic fashion at Saree Elegance.`} />
+        <meta name="keywords" content={`${safeTitle}, sarees, indian sarees, designer sarees, traditional wear, ethnic fashion, online shopping`} />
+        <meta property="og:title" content={`${safeTitle} - Saree Elegance`} />
+        <meta property="og:description" content={`Browse our collection of ${safeTitle.toLowerCase()} at Saree Elegance.`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`https://ecom-one-wheat.vercel.app/products${location.search}`} />
         <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content={`${title} - Saree Elegance`} />
+        <meta name="twitter:title" content={`${safeTitle} - Saree Elegance`} />
         <link rel="canonical" href={`https://ecom-one-wheat.vercel.app/products${location.search}`} />
       </Helmet>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-3xl md:text-4xl font-bold">{title}</h1>
+        <h1 className="font-serif text-3xl md:text-4xl font-bold">{safeTitle}</h1>
         <div className="flex items-center gap-4">
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
