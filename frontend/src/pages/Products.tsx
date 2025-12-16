@@ -145,22 +145,36 @@ const Products = () => {
   
   const { data, isLoading, error } = useQuery<Product[]>({ 
     queryKey: ["products", { new: isNew, sale: isSale, bestseller: isBestSeller }], 
-    queryFn: () => getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller }),
+    queryFn: async () => {
+      try {
+        return await getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller });
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        return [];
+      }
+    },
     retry: 2,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 30000 // Cache for 30 seconds
   });
   
   // Initialize categories from URL param if present
   useEffect(() => {
-    if (categoryParam && categoryParam !== "new" && categoryParam !== "sale" && categoryParam !== "bestsellers" && !selectedCategories.includes(categoryParam)) {
-      setSelectedCategories([categoryParam]);
+    if (categoryParam && categoryParam !== "new" && categoryParam !== "sale" && categoryParam !== "bestsellers") {
+      setSelectedCategories(prev => {
+        if (!prev.includes(categoryParam)) {
+          return [categoryParam];
+        }
+        return prev;
+      });
     }
-  }, [categoryParam, selectedCategories]);
+  }, [categoryParam]);
 
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   const products = useMemo(() => {
-    const list = (data || []).filter((p) => {
+    if (!data || !Array.isArray(data)) return [];
+    const list = data.filter((p) => {
       const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand?.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
       const matchesCategoryParam = (() => {
         if (isNew) return true;
@@ -204,6 +218,9 @@ const Products = () => {
     if (categoryParam === "lenin") return "Lenin Collection"; 
     return "Shop Sarees";
   }, [isNew, isSale, isBestSeller, categoryParam]);
+
+  // Ensure we always have a valid products array
+  const safeProducts = Array.isArray(products) ? products : [];
 
   return (
     <div className="container px-4 py-8">
@@ -335,7 +352,7 @@ const Products = () => {
             <Button onClick={() => window.location.reload()}>Retry</Button>
           </div>
         </div>
-      ) : products.length === 0 ? (
+      ) : safeProducts.length === 0 ? (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <p className="text-muted-foreground mb-4">No products found.</p>
@@ -355,7 +372,7 @@ const Products = () => {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {products.map((product) => (
+          {safeProducts.map((product) => (
             <ProductCard key={product.id} product={product} compact />
           ))}
         </div>
