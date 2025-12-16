@@ -147,7 +147,9 @@ const Products = () => {
     queryKey: ["products", { new: isNew, sale: isSale, bestseller: isBestSeller }], 
     queryFn: async () => {
       try {
-        return await getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller });
+        const result = await getProducts({ new: isNew, sale: isSale, bestseller: isBestSeller });
+        console.log("Products loaded:", result?.length || 0);
+        return result || [];
       } catch (err) {
         console.error("Error fetching products:", err);
         return [];
@@ -155,7 +157,7 @@ const Products = () => {
     },
     retry: 2,
     refetchOnWindowFocus: false,
-    staleTime: 30000 // Cache for 30 seconds
+    staleTime: 30000
   });
   
   // Initialize categories from URL param if present
@@ -173,33 +175,50 @@ const Products = () => {
   const query = useMemo(() => new URLSearchParams(location.search).get("query")?.toLowerCase() ?? "", [location.search]);
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   const products = useMemo(() => {
-    if (!data || !Array.isArray(data)) return [];
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.log("No data or empty array");
+      return [];
+    }
+    
+    console.log("Filtering products. Total:", data.length, "Selected categories:", selectedCategories.length);
+    
     const list = data.filter((p) => {
-      const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand?.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
-      const matchesCategoryParam = (() => {
-        if (isNew) return true;
-        if (isSale) return !!p.onSale;
-        if (isBestSeller) return !!p.isBestSeller;
-        if (subParam) return p.category.toLowerCase().includes(subParam.toLowerCase());
-        if (categoryParam && selectedCategories.length === 0) {
-          // If URL has category param but no filter selection, use URL param
-          return p.category.toLowerCase().includes(categoryParam.toLowerCase());
-        }
-        return true;
-      })();
+      // Query match
+      const matchesQuery = !query || (p.name?.toLowerCase().includes(query) || p.brand?.toLowerCase().includes(query) || p.category?.toLowerCase().includes(query));
       
-      // Match selected categories - show products from ANY selected category
-      const matchesCategorySelection = selectedCategories.length
-        ? selectedCategories.some((c) => p.category.toLowerCase().includes(c.toLowerCase()))
-        : true;
+      // Category param match (for special pages like new, sale, bestsellers)
+      let matchesCategoryParam = true;
+      if (isNew) {
+        matchesCategoryParam = true; // Show all for new arrivals
+      } else if (isSale) {
+        matchesCategoryParam = !!p.onSale;
+      } else if (isBestSeller) {
+        matchesCategoryParam = !!p.isBestSeller;
+      } else if (subParam) {
+        matchesCategoryParam = p.category?.toLowerCase().includes(subParam.toLowerCase()) || false;
+      } else if (categoryParam && selectedCategories.length === 0 && !isNew && !isSale && !isBestSeller) {
+        // Only use categoryParam if no categories are selected and it's not a special page
+        matchesCategoryParam = p.category?.toLowerCase().includes(categoryParam.toLowerCase()) || false;
+      }
       
-      // Match selected subcategories - if subcategories are selected, filter by them
-      const matchesSubcategorySelection = selectedSubcategories.length
-        ? selectedSubcategories.some((s) => p.category.toLowerCase().includes(s.toLowerCase()))
-        : true;
+      // Selected categories match
+      const matchesCategorySelection = selectedCategories.length === 0
+        ? true
+        : selectedCategories.some((c) => p.category?.toLowerCase().includes(c.toLowerCase()));
+      
+      // Selected subcategories match
+      const matchesSubcategorySelection = selectedSubcategories.length === 0
+        ? true
+        : selectedSubcategories.some((s) => p.category?.toLowerCase().includes(s.toLowerCase()));
+      
+      // Price range match
       const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
-      return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesSubcategorySelection && matchesPrice;
+      
+      const result = matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesSubcategorySelection && matchesPrice;
+      return result;
     });
+
+    console.log("Filtered products:", list.length);
 
     if (sortBy === "price-low") {
       list.sort((a, b) => a.price - b.price);
@@ -349,13 +368,24 @@ const Products = () => {
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <p className="text-destructive mb-4">Failed to load products. Please try again.</p>
+            <p className="text-sm text-muted-foreground mb-4">Error: {error instanceof Error ? error.message : String(error)}</p>
             <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      ) : !data || data.length === 0 ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">No products available in the database.</p>
+            <Link to="/">
+              <Button variant="outline">Go to Home</Button>
+            </Link>
           </div>
         </div>
       ) : safeProducts.length === 0 ? (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
-            <p className="text-muted-foreground mb-4">No products found.</p>
+            <p className="text-muted-foreground mb-4">No products match your filters.</p>
+            <p className="text-sm text-muted-foreground mb-4">Total products: {data.length}</p>
             {(selectedCategories.length > 0 || selectedSubcategories.length > 0 || priceRange[0] > 0 || priceRange[1] < 30000) && (
               <Button
                 variant="outline"
