@@ -73,7 +73,7 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
               </span>
             ))}
           </div>
-          <span className={`${compact ? "text-xs" : "text-sm"} text-muted-foreground`}>({product.reviews.length})</span>
+          <span className={`${compact ? "text-xs" : "text-sm"} text-muted-foreground`}>({product.reviews?.length || 0})</span>
         </div>
 
         <Button className="w-full mt-2" variant="outline" size={compact ? "sm" : "default"} onClick={() => addToCart(product, 1)}>
