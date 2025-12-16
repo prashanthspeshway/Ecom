@@ -165,7 +165,7 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-sm text-muted-foreground">
-                {product.rating} ({product.reviews.length} reviews)
+                {product.rating} ({product.reviews?.length || 0} reviews)
               </span>
             </div>
 
@@ -266,7 +266,7 @@ const ProductDetail = () => {
           <TabsList className="w-full justify-start">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="care">Care Instructions</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews ({product.reviews.length})</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews ({product.reviews?.length || 0})</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="mt-6 space-y-6">
             
@@ -294,8 +294,8 @@ const ProductDetail = () => {
             <p className="text-muted-foreground">{product.care}</p>
           </TabsContent>
           <TabsContent value="reviews" className="mt-6 space-y-6">
-            {product.reviews.length > 0 ? (
-              product.reviews.map((review) => (
+            {(product.reviews?.length || 0) > 0 ? (
+              (product.reviews || []).map((review) => (
                 <div key={review.id} className="border-b pb-6">
                   <div className="flex items-center justify-between mb-2">
                     <div>
