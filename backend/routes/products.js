@@ -75,10 +75,10 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
 
       // Get user info from orders to find name
       const orders = getOrders();
-      const userOrders = Object.values(orders).flat().filter((o: any) => o.user === req.user.email);
+      const userOrders = Object.values(orders).flat().filter((o) => o.user === req.user.email);
       let author = req.user.email;
       if (userOrders.length > 0 && userOrders[0].shipping) {
-        const shipping = userOrders[0].shipping as any;
+        const shipping = userOrders[0].shipping;
         if (shipping.first || shipping.last) {
           author = [shipping.first, shipping.last].filter(Boolean).join(" ") || req.user.email;
         }
@@ -276,10 +276,10 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
 
       // Get user info from orders to find name
       const orders = getOrders();
-      const userOrders = Object.values(orders).flat().filter((o: any) => o.user === req.user.email);
+      const userOrders = Object.values(orders).flat().filter((o) => o.user === req.user.email);
       let author = req.user.email;
       if (userOrders.length > 0 && userOrders[0].shipping) {
-        const shipping = userOrders[0].shipping as any;
+        const shipping = userOrders[0].shipping;
         if (shipping.first || shipping.last) {
           author = [shipping.first, shipping.last].filter(Boolean).join(" ") || req.user.email;
         }
