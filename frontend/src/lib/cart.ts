@@ -72,24 +72,15 @@ export function updateQuantity(productId: string, quantity: number) {
   const items = read();
   const idx = items.findIndex((i) => i.product.id === productId);
   if (idx >= 0) {
-    const product = items[idx].product;
-    // Respect stock limit
-    const maxQty = product.stock || 999;
-    const newQty = Math.max(1, Math.min(quantity, maxQty));
-    items[idx].quantity = newQty;
+    items[idx].quantity = Math.max(1, quantity);
     write(items);
-    // Dispatch event to update UI
-    window.dispatchEvent(new CustomEvent("cart:update"));
     if (token) {
       authFetch("/api/cart", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: newQty }),
-      }).then(async (res) => {
-        if (res.ok) {
-          // Only sync if update was successful
-          await syncCartFromServer().catch(() => {});
-        }
+        body: JSON.stringify({ productId, quantity: Math.max(1, quantity) }),
+      }).then(() => {
+        syncCartFromServer().catch(() => {});
       }).catch(() => {});
     }
   }

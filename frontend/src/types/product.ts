@@ -3,7 +3,6 @@ export interface Product {
   name: string;
   brand: string;
   images: string[];
-  imageAltTags?: string[];
   price: number;
   originalPrice?: number;
   discount?: number;
@@ -30,9 +29,6 @@ export interface Product {
   reviews: Review[];
   category: string;
   occasion?: string;
-  onSale?: boolean;
-  isBestSeller?: boolean;
-  createdAt?: number;
 }
 
 export interface Review {

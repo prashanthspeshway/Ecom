@@ -1,46 +1,36 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, adminOnly }) {
+export default function register({ app, getDb, authMiddleware, adminOnly, getCarousel, setCarousel, saveCarousel }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        const doc = await db.collection("carousel").findOne({ _id: "default" });
+        return res.json(Array.isArray(doc?.images) ? doc.images.slice(0,5) : []);
       }
-
-      const doc = await db.collection("carousel").findOne({ _id: "default" });
-      const images = Array.isArray(doc?.images) ? doc.images.slice(0, 5) : [];
-      res.json(images);
+      const arr = getCarousel();
+      res.json(Array.isArray(arr) ? arr.slice(0,5) : []);
     } catch (e) {
-      console.error("[carousel] Get error:", e);
-      res.status(500).json({ error: "Failed to fetch carousel" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
       const { images } = req.body || {};
-      const list = Array.isArray(images)
-        ? images.filter((u) => typeof u === "string").slice(0, 5)
-        : [];
-
+      const list = Array.isArray(images) ? images.filter((u) => typeof u === "string").slice(0,5) : [];
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        await db.collection("carousel").updateOne({ _id: "default" }, { $set: { images: list } }, { upsert: true });
+        return res.json({ success: true });
       }
-
-      await db.collection("carousel").updateOne(
-        { _id: "default" },
-        { $set: { images: list } },
-        { upsert: true }
-      );
-
+      setCarousel(list);
+      saveCarousel();
       res.json({ success: true });
     } catch (e) {
-      console.error("[carousel] Update error:", e);
-      res.status(500).json({ error: "Failed to update carousel" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 

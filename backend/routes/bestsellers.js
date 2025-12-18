@@ -1,59 +1,45 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, adminOnly }) {
+export default function register({ app, getDb, authMiddleware, adminOnly, getBestsellers, setBestsellers, saveBestsellers, getProducts }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
     try {
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        const list = await db.collection("bestsellers").find({}).toArray();
+        const ids = list.map((b) => b.id);
+        const products = await db.collection("products").find({ id: { $in: ids } }).toArray();
+        return res.json(products);
       }
-
-      const list = await db.collection("bestsellers").find({}).toArray();
-      const ids = list.map((b) => b.id);
-      const products = await db.collection("products").find({ id: { $in: ids } }).toArray();
-      res.json(products);
+      const ids = getBestsellers();
+      const products = getProducts();
+      const bestsellers = ids.map((id) => products.find((p) => p.id === id)).filter(Boolean);
+      res.json(bestsellers);
     } catch (e) {
-      console.error("[bestsellers] Get error:", e);
-      res.status(500).json({ error: "Failed to fetch bestsellers" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
-      const { id, ids } = req.body || {};
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: "Product ID required" });
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
-      }
-
-      // Handle bulk update with ids array (for curated bestsellers)
-      if (Array.isArray(ids)) {
-        await db.collection("bestsellers").deleteMany({});
-        if (ids.length > 0) {
-          await db.collection("bestsellers").insertMany(
-            ids.map((productId) => ({ id: productId }))
-          );
-        }
+      if (db) {
+        const exists = await db.collection("bestsellers").findOne({ id });
+        if (exists) return res.json({ success: true });
+        await db.collection("bestsellers").insertOne({ id });
         return res.json({ success: true });
       }
-
-      // Handle single id
-      if (!id) {
-        return res.status(400).json({ error: "Product ID required" });
+      const ids = getBestsellers();
+      if (!ids.includes(id)) {
+        setBestsellers([...ids, id]);
+        saveBestsellers();
       }
-
-      const exists = await db.collection("bestsellers").findOne({ id });
-      if (exists) {
-        return res.json({ success: true });
-      }
-
-      await db.collection("bestsellers").insertOne({ id });
       res.json({ success: true });
     } catch (e) {
-      console.error("[bestsellers] Create error:", e);
-      res.status(500).json({ error: "Failed to add bestseller" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
@@ -62,43 +48,21 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
       const body = req.body || {};
       const queryId = (req.query?.id || "").toString();
       const id = body.id || queryId;
-      
-      if (!id) {
-        return res.status(400).json({ error: "Product ID required" });
-      }
-
+      if (!id) return res.status(400).json({ error: "Product ID required" });
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        await db.collection("bestsellers").deleteOne({ id });
+        return res.json({ success: true });
       }
-
-      await db.collection("bestsellers").deleteOne({ id });
+      const ids = getBestsellers().filter((i) => i !== id);
+      setBestsellers(ids);
+      saveBestsellers();
       res.json({ success: true });
     } catch (e) {
-      console.error("[bestsellers] Delete error:", e);
-      res.status(500).json({ error: "Failed to delete bestseller" });
-    }
-  });
-
-  router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
-    try {
-      const id = req.params.id;
-      if (!id) {
-        return res.status(400).json({ error: "Product ID required" });
-      }
-
-      const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
-      }
-
-      await db.collection("bestsellers").deleteOne({ id });
-      res.json({ success: true });
-    } catch (e) {
-      console.error("[bestsellers] Delete by id error:", e);
-      res.status(500).json({ error: "Failed to delete bestseller" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   app.use("/api/bestsellers", router);
 }
+

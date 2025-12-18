@@ -23,14 +23,9 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
         <div className={`relative overflow-hidden rounded-lg bg-card ${compact ? "aspect-[3/4]" : "aspect-square"} mb-3`}>
           <img
             src={(product.images?.[0] && !String(product.images?.[0]).startsWith("blob:")) ? product.images![0] : "/placeholder.svg"}
-            alt={product.imageAltTags?.[0] || product.name}
+            alt={product.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {product.onSale && (
-            <Badge className="absolute bottom-3 right-3 bg-red-600 text-white z-10">
-              SALE
-            </Badge>
-          )}
           {product.discount && (
             <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground">
               {product.discount}% OFF
@@ -73,7 +68,7 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
               </span>
             ))}
           </div>
-          <span className={`${compact ? "text-xs" : "text-sm"} text-muted-foreground`}>({product.reviews?.length || 0})</span>
+          <span className={`${compact ? "text-xs" : "text-sm"} text-muted-foreground`}>({product.reviews.length})</span>
         </div>
 
         <Button className="w-full mt-2" variant="outline" size={compact ? "sm" : "default"} onClick={() => addToCart(product, 1)}>

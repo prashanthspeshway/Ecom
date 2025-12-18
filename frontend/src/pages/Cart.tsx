@@ -1,7 +1,7 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import type { CartItem } from "@/types/product";
@@ -25,11 +25,6 @@ const Cart = () => {
   if (cartItems.length === 0) {
     return (
       <div className="container px-4 py-16">
-        <Helmet>
-          <title>Shopping Cart - Saree Elegance</title>
-          <meta name="description" content="Your shopping cart is empty. Browse our collection of premium Indian sarees and traditional wear." />
-          <meta name="robots" content="noindex, nofollow" />
-        </Helmet>
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <h1 className="font-serif text-3xl md:text-4xl font-bold">Your Cart</h1>
           <p className="text-muted-foreground">Your cart is empty</p>
@@ -43,11 +38,6 @@ const Cart = () => {
 
   return (
     <div className="container px-4 py-8">
-      <Helmet>
-        <title>{`Shopping Cart (${cartItems.length} items) - Saree Elegance`}</title>
-        <meta name="description" content={`Your shopping cart contains ${cartItems.length} item(s). Review your selection and proceed to checkout.`} />
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <h1 className="font-serif text-3xl md:text-4xl font-bold mb-8">Shopping Cart</h1>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -55,7 +45,7 @@ const Cart = () => {
           {cartItems.map(({ product, quantity }) => (
             <div key={product.id} className="flex items-center justify-between border rounded-lg p-4">
               <div className="flex items-center gap-4">
-                <img src={product.images?.[0] ?? "/placeholder.svg"} alt={product.imageAltTags?.[0] || product.name} className="w-16 h-16 rounded-md object-cover" />
+                <img src={product.images?.[0] ?? "/placeholder.svg"} alt={product.name} className="w-16 h-16 rounded-md object-cover" />
                 <div>
                   <p className="font-semibold">{product.name}</p>
                   <p className="text-sm text-muted-foreground">₹{product.price.toLocaleString()}</p>
@@ -63,36 +53,11 @@ const Cart = () => {
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center border rounded-lg">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => { 
-                      updateQuantity(product.id, Math.max(1, quantity - 1)); 
-                      setCartItems(getCart());
-                    }}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="px-4 py-2 min-w-[3rem] text-center">{quantity}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => { 
-                      updateQuantity(product.id, quantity + 1); 
-                      setCartItems(getCart());
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { updateQuantity(product.id, Math.max(1, quantity - 1)); }}>-</Button>
+                  <span className="px-4 py-2">{quantity}</span>
+                  <Button variant="ghost" size="sm" onClick={() => { updateQuantity(product.id, quantity + 1); }}>+</Button>
                 </div>
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  onClick={() => { 
-                    removeFromCart(product.id); 
-                    setCartItems(getCart());
-                  }}
-                >
+                <Button variant="destructive" size="icon" onClick={() => { removeFromCart(product.id); }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -122,6 +87,12 @@ const Cart = () => {
               </div>
             </div>
 
+            <div className="space-y-3 mb-6">
+              <Input placeholder="Enter promo code" />
+              <Button variant="outline" className="w-full">
+                Apply Code
+              </Button>
+            </div>
 
             <Link to="/checkout">
               <Button size="lg" className="w-full">

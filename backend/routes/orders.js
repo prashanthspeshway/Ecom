@@ -1,151 +1,100 @@
 import express from "express";
 import crypto from "crypto";
 
-export default function register({ app, getDb, authMiddleware }) {
+export default function register({ app, getDb, authMiddleware, adminOnly, getOrders, setOrders, saveOrders, getLastCheckout, setLastCheckout, getProducts, getCarts, setCarts, saveCarts }) {
   const router = express.Router();
 
   router.get("/", authMiddleware, async (req, res) => {
     try {
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        const list = await db.collection("orders").find({ user: req.user.email }).sort({ createdAt: -1 }).toArray();
+        return res.json(list);
       }
-
-      const list = await db.collection("orders")
-        .find({ user: req.user.email })
-        .sort({ createdAt: -1 })
-        .toArray();
-      
+      const list = Array.isArray(getOrders()[req.user.email]) ? getOrders()[req.user.email] : [];
       res.json(list);
     } catch (e) {
-      console.error("[orders] Get error:", e);
-      res.status(500).json({ error: "Failed to fetch orders" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   router.get("/:id", authMiddleware, async (req, res) => {
     try {
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        const item = await db.collection("orders").findOne({ id: req.params.id, user: req.user.email });
+        if (!item) return res.status(404).json({ error: "Not found" });
+        return res.json(item);
       }
-
-      const item = await db.collection("orders").findOne({
-        id: req.params.id,
-        user: req.user.email,
-      });
-
-      if (!item) {
-        return res.status(404).json({ error: "Order not found" });
-      }
-
+      const list = Array.isArray(getOrders()[req.user.email]) ? getOrders()[req.user.email] : [];
+      const item = list.find((o) => o.id === req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
       res.json(item);
     } catch (e) {
-      console.error("[orders] Get by id error:", e);
-      res.status(500).json({ error: "Failed to fetch order" });
-    }
-  });
-
-  router.put("/", authMiddleware, async (req, res) => {
-    try {
-      const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
-      }
-
-      // Update order with payment details
-      if (req.body.razorpayOrderId && req.body.razorpayPaymentId) {
-        await db.collection("orders").updateOne(
-          { razorpayOrderId: req.body.razorpayOrderId, user: req.user.email },
-          {
-            $set: {
-              razorpayPaymentId: req.body.razorpayPaymentId,
-              status: "placed",
-            },
-          }
-        );
-        res.json({ success: true });
-        return;
-      }
-
-      res.status(400).json({ error: "Invalid update request" });
-    } catch (e) {
-      console.error("[orders] Update error:", e);
-      res.status(500).json({ error: "Failed to update order" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   router.post("/", authMiddleware, async (req, res) => {
     try {
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
-      }
-
       let items = Array.isArray(req.body?.items) ? req.body.items : [];
-      
-      // If no items provided, get from cart
       if (!items.length) {
-        const cartItems = await db.collection("cart")
-          .find({ user: req.user.email })
-          .toArray();
-        items = cartItems.map((c) => ({
-          productId: c.productId,
-          quantity: Number(c.quantity || 1),
-        }));
+        if (db) {
+          const cartItems = await db.collection("cart").find({ user: req.user.email }).toArray();
+          items = cartItems.map((c) => ({ productId: c.productId, quantity: Number(c.quantity || 1) }));
+        } else {
+          const carts = getCarts();
+          const list = Array.isArray(carts[req.user.email]) ? carts[req.user.email] : [];
+          items = list.map((c) => ({ productId: c.productId, quantity: Number(c.quantity || 1) }));
+        }
       }
-
-      if (!items.length) {
-        return res.status(400).json({ error: "Cart is empty" });
+      if (!items.length) return res.status(400).json({ error: "Cart is empty" });
+      if (db) {
+        const map = new Map((await db.collection("products").find({ id: { $in: items.map((it) => it.productId) } }).toArray()).map((p) => [p.id, p]));
+        const enriched = items.map((it) => {
+          const p = map.get(it.productId) || {};
+          return { productId: it.productId, quantity: Number(it.quantity || 1), price: Number(p.price || 0), name: p.name || "", image: (p.images || [])[0] || "", progress: { placed: Date.now() } };
+        });
+        const order = { id: crypto.randomUUID(), user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: getLastCheckout()?.[req.user.email] || null };
+        await db.collection("orders").insertOne(order);
+        await db.collection("cart").deleteMany({ user: req.user.email });
+        return res.json(order);
       }
-
-      // Get product details
-      const productIds = items.map((it) => it.productId);
-      const products = await db.collection("products")
-        .find({ id: { $in: productIds } })
-        .toArray();
+      const products = getProducts() || [];
       const pmap = new Map(products.map((p) => [p.id, p]));
-
-      // Enrich items with product data
       const enriched = items.map((it) => {
         const p = pmap.get(it.productId) || {};
-        return {
-          productId: it.productId,
-          quantity: Number(it.quantity || 1),
-          price: Number(p.price || 0),
-          name: p.name || "",
-          image: (p.images || [])[0] || "",
-          progress: { placed: Date.now() },
-        };
+        return { productId: it.productId, quantity: Number(it.quantity || 1), price: Number(p.price || 0), name: p.name || "", image: (p.images || [])[0] || "", progress: { placed: Date.now() } };
       });
-
-      // Calculate total
-      const total = enriched.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-      const order = {
-        id: crypto.randomUUID(),
-        user: req.user.email,
-        items: enriched,
-        status: req.body.payment === "razorpay" ? "pending" : "placed",
-        createdAt: Date.now(),
-        shipping: req.body.address || null,
-        payment: req.body.payment || "cod",
-        total: total,
-        razorpayOrderId: req.body.razorpayOrderId || null,
-        razorpayPaymentId: req.body.razorpayPaymentId || null,
-      };
-
-      await db.collection("orders").insertOne(order);
-      
-      // Clear cart after order creation (only if payment is COD or Razorpay payment is confirmed)
-      if (req.body.payment === "cod" || req.body.razorpayPaymentId) {
-        await db.collection("cart").deleteMany({ user: req.user.email });
-      }
-
+      const order = { id: String(Date.now()), user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: getLastCheckout()?.[req.user.email] || null };
+      const orders = getOrders();
+      const list = Array.isArray(orders[req.user.email]) ? orders[req.user.email] : [];
+      orders[req.user.email] = [order, ...list];
+      setOrders(orders);
+      saveOrders();
+      const carts = getCarts();
+      carts[req.user.email] = [];
+      setCarts(carts);
+      if (typeof saveCarts === "function") saveCarts();
       res.json(order);
     } catch (e) {
-      console.error("[orders] Create error:", e);
-      res.status(500).json({ error: "Failed to create order" });
+      res.status(500).json({ error: "Failed" });
+    }
+  });
+
+  
+
+  app.post("/api/checkout", authMiddleware, (req, res) => {
+    try {
+      const email = req.user?.email;
+      const prev = getLastCheckout();
+      const next = { ...(req.body || {}), date: Date.now() };
+      prev[email] = next;
+      setLastCheckout(prev);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed" });
     }
   });
 

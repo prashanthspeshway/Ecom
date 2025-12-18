@@ -1,86 +1,75 @@
 import express from "express";
 
-export default function register({ app, getDb, authMiddleware, adminOnly }) {
+export default function register({ app, getDb, authMiddleware, adminOnly, getSubcategories, saveSubcategories }) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
     try {
       const category = req.query?.category;
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
-      }
-
-      const query = category ? { category } : {};
-      const list = await db.collection("subcategories").find(query).toArray();
-      
-      if (category) {
-        const subcats = list.map((s) => s.name);
-        res.json(subcats);
-      } else {
-        const grouped = list.reduce((acc, s) => {
+      if (db) {
+        const query = category ? { category } : {};
+        const list = await db.collection("subcategories").find(query).toArray();
+        const subcats = category ? list.map((s) => s.name) : list.reduce((acc, s) => {
           if (!acc[s.category]) acc[s.category] = [];
           acc[s.category].push(s.name);
           return acc;
         }, {});
-        res.json(grouped);
+        return res.json(subcats);
+      }
+      const subs = getSubcategories();
+      if (category) {
+        res.json(Array.isArray(subs[category]) ? subs[category] : []);
+      } else {
+        res.json(subs);
       }
     } catch (e) {
-      console.error("[subcategories] Get error:", e);
-      res.status(500).json({ error: "Failed to fetch subcategories" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
       const { category, name } = req.body || {};
-      if (!category || !name) {
-        return res.status(400).json({ error: "Category and name required" });
-      }
-
+      if (!category || !name) return res.status(400).json({ error: "Category and name required" });
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
-      }
-
-      const exists = await db.collection("subcategories").findOne({ category, name });
-      if (exists) {
+      if (db) {
+        const exists = await db.collection("subcategories").findOne({ category, name });
+        if (exists) return res.json({ success: true });
+        await db.collection("subcategories").insertOne({ category, name });
         return res.json({ success: true });
       }
-
-      await db.collection("subcategories").insertOne({ category, name });
+      const subs = getSubcategories();
+      if (!subs[category]) subs[category] = [];
+      if (!subs[category].includes(name)) {
+        subs[category].push(name);
+        saveSubcategories();
+      }
       res.json({ success: true });
     } catch (e) {
-      console.error("[subcategories] Create error:", e);
-      res.status(500).json({ error: "Failed to create subcategory" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   router.put("/", authMiddleware, adminOnly, async (req, res) => {
     try {
       const { category, oldName, newName } = req.body || {};
-      if (!category || !oldName || !newName) {
-        return res.status(400).json({ error: "Category, oldName and newName required" });
-      }
-
+      if (!category || !oldName || !newName) return res.status(400).json({ error: "Category, oldName and newName required" });
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        const exists = await db.collection("subcategories").findOne({ category, name: oldName });
+        if (!exists) return res.status(404).json({ error: "Not found" });
+        await db.collection("subcategories").updateOne({ category, name: oldName }, { $set: { name: newName } });
+        return res.json({ success: true });
       }
-
-      const exists = await db.collection("subcategories").findOne({ category, name: oldName });
-      if (!exists) {
-        return res.status(404).json({ error: "Subcategory not found" });
-      }
-
-      await db.collection("subcategories").updateOne(
-        { category, name: oldName },
-        { $set: { name: newName } }
-      );
+      const subs = getSubcategories();
+      if (!subs[category] || !subs[category].includes(oldName)) return res.status(404).json({ error: "Not found" });
+      const idx = subs[category].indexOf(oldName);
+      subs[category][idx] = newName;
+      saveSubcategories();
       res.json({ success: true });
     } catch (e) {
-      console.error("[subcategories] Update error:", e);
-      res.status(500).json({ error: "Failed to update subcategory" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
@@ -91,23 +80,24 @@ export default function register({ app, getDb, authMiddleware, adminOnly }) {
       const queryCategory = (req.query?.category || "").toString();
       const name = body.name || queryName;
       const category = body.category || queryCategory;
-      
-      if (!category || !name) {
-        return res.status(400).json({ error: "Category and name required" });
-      }
-
+      if (!category || !name) return res.status(400).json({ error: "Category and name required" });
       const db = getDb();
-      if (!db) {
-        return res.status(503).json({ error: "Database unavailable" });
+      if (db) {
+        await db.collection("subcategories").deleteOne({ category, name });
+        return res.json({ success: true });
       }
-
-      await db.collection("subcategories").deleteOne({ category, name });
+      const subs = getSubcategories();
+      if (subs[category]) {
+        subs[category] = subs[category].filter((n) => n !== name);
+        if (subs[category].length === 0) delete subs[category];
+        saveSubcategories();
+      }
       res.json({ success: true });
     } catch (e) {
-      console.error("[subcategories] Delete error:", e);
-      res.status(500).json({ error: "Failed to delete subcategory" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
   app.use("/api/subcategories", router);
 }
+

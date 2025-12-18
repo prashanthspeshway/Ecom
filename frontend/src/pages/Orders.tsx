@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { authFetch, getToken } from "@/lib/auth";
 
 type Progress = { placed?: number; dispatched?: number; in_transit?: number; shipped?: number; out_for_delivery?: number; delivered?: number };
@@ -27,11 +26,6 @@ const Orders = () => {
   if (loading) return (<div className="container px-4 py-16"><p>Loading…</p></div>);
   if (!orders.length) return (
     <div className="container px-4 py-16">
-      <Helmet>
-        <title>My Orders - Saree Elegance</title>
-        <meta name="description" content="View your order history and track your purchases." />
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <div className="max-w-2xl mx-auto text-center space-y-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">My Orders</h1>
         <p className="text-muted-foreground">No orders yet</p>
@@ -43,11 +37,6 @@ const Orders = () => {
   );
   return (
     <div className="container px-4 py-16">
-      <Helmet>
-        <title>{`My Orders (${orders.length}) - Saree Elegance`}</title>
-        <meta name="description" content={`View your ${orders.length} order(s) and track their status.`} />
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <h1 className="font-serif text-3xl md:text-4xl font-bold mb-6">My Orders</h1>
       <div className="space-y-4">
         {orders.map((o) => {

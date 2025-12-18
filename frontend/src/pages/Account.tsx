@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { User, Package, MapPin, Heart, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,11 +22,10 @@ const Account = () => {
         const res = await authFetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
-          // Handle both { user: {...} } and { email, name, role } formats
-          setProfile(data.user || data);
+          setProfile(data as Profile);
         }
       } catch (e) {
-        console.error("Failed to fetch profile:", e);
+        // no-op
       }
     })();
   }, []);
@@ -39,10 +37,6 @@ const Account = () => {
   if (role === "admin") {
     return (
       <div className="container px-4 py-16 text-center">
-        <Helmet>
-          <title>Admin Account - Saree Elegance</title>
-          <meta name="robots" content="noindex, nofollow" />
-        </Helmet>
         <h1 className="font-serif text-3xl md:text-4xl font-bold mb-4">Admin Account</h1>
         <p className="text-muted-foreground mb-6">Admins manage products from the Admin Panel.</p>
         <div className="flex items-center justify-center gap-4">
@@ -65,11 +59,6 @@ const Account = () => {
 
   return (
     <div className="container px-4 py-8">
-      <Helmet>
-        <title>My Account - Saree Elegance</title>
-        <meta name="description" content="Manage your account, view order history, update profile, and manage your wishlist." />
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-serif text-3xl md:text-4xl font-bold">My Account</h1>
@@ -159,7 +148,7 @@ const WishlistContent = () => {
         {items.map((p) => (
           <div key={p.id} className="border rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={p.images?.[0] ?? "/placeholder.svg"} alt={p.imageAltTags?.[0] || p.name} className="w-16 h-16 rounded-md object-cover" />
+              <img src={p.images?.[0] ?? "/placeholder.svg"} alt={p.name} className="w-16 h-16 rounded-md object-cover" />
               <div>
                 <p className="font-semibold">{p.name}</p>
                 <p className="text-sm text-muted-foreground">₹{p.price.toLocaleString()}</p>

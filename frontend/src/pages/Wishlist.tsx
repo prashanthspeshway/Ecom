@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/types/product";
 import { addToCart } from "@/lib/cart";
@@ -36,11 +35,6 @@ const Wishlist = () => {
   if (!items.length) {
     return (
       <div className="container px-4 py-16">
-        <Helmet>
-          <title>My Wishlist - Saree Elegance</title>
-          <meta name="description" content="View your saved favorite sarees and traditional wear items." />
-          <meta name="robots" content="noindex, nofollow" />
-        </Helmet>
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <h1 className="font-serif text-3xl md:text-4xl font-bold">My Wishlist</h1>
           <Heart className="h-16 w-16 mx-auto text-muted-foreground" />
@@ -53,17 +47,12 @@ const Wishlist = () => {
 
   return (
     <div className="container px-4 py-8">
-      <Helmet>
-        <title>{`My Wishlist (${items.length} items) - Saree Elegance`}</title>
-        <meta name="description" content={`Your wishlist contains ${items.length} saved item(s).`} />
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <h1 className="font-serif text-3xl md:text-4xl font-bold mb-8">My Wishlist</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((p) => (
           <div key={p.id} className="border rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={p.images?.[0] ?? "/placeholder.svg"} alt={p.imageAltTags?.[0] || p.name} className="w-16 h-16 rounded-md object-cover" />
+              <img src={p.images?.[0] ?? "/placeholder.svg"} alt={p.name} className="w-16 h-16 rounded-md object-cover" />
               <div>
                 <p className="font-semibold">{p.name}</p>
                 <p className="text-sm text-muted-foreground">₹{p.price.toLocaleString()}</p>

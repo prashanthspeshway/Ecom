@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
@@ -16,8 +15,6 @@ import { toast } from "@/components/ui/sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AdminBestSellersDialog } from "@/components/AdminBestSellersDialog";
-import { AdminFeaturedCollectionDialog } from "@/components/AdminFeaturedCollectionDialog";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -82,8 +79,6 @@ const Admin = () => {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null]);
   const [filePickerIndex, setFilePickerIndex] = useState<number | null>(null);
-  const [mainImageAlt, setMainImageAlt] = useState<string>("");
-  const [imageAlts, setImageAlts] = useState<string[]>(["", "", "", "", ""]);
   
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
   const [colorItems, setColorItems] = useState<{ file: File | null; imageUrl?: string; url: string }[]>([]);
@@ -129,102 +124,6 @@ const Admin = () => {
   const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
   const [openItem, setOpenItem] = useState<string | undefined>(undefined);
-
-  const handleCreateProduct = async () => {
-    if (!form.name || !form.price) {
-      toast("Name and price are required");
-      return;
-    }
-    try {
-      let thumbUrl: string | null = null;
-      if (thumbnailFile) {
-        const tfd = new FormData();
-        tfd.append("files", thumbnailFile);
-        const tres = await authFetch("/api/upload", { method: "POST", body: tfd });
-        const tdata = await tres.json();
-        thumbUrl = (tdata.urls || [])[0] || null;
-      }
-      let uploaded: string[] = [];
-      const selected = files.filter(Boolean) as File[];
-      if (selected.length) {
-        const fd = new FormData();
-        selected.forEach((f) => fd.append("files", f));
-        const res = await authFetch("/api/upload", { method: "POST", body: fd });
-        const data = await res.json();
-        uploaded = data.urls || [];
-      }
-      const thumbInputUrl = form.images.trim();
-      const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
-      const urls = [] as string[];
-      const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
-      
-      // Build alt tags array matching images array
-      const altTagsArray: string[] = [];
-      if (firstImage) {
-        altTagsArray.push(mainImageAlt.trim() || form.name);
-      }
-      uploaded.forEach((_, idx) => {
-        altTagsArray.push(imageAlts[idx]?.trim() || form.name);
-      });
-      urls.forEach(() => {
-        altTagsArray.push(form.name);
-      });
-      
-      const colorLinks = colorItems
-        .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
-        .filter((ci) => ci.file || ci.imageUrl);
-      const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!);
-      let uploadedColorUrls: string[] = [];
-      if (filesToUpload.length) {
-        const cfd = new FormData();
-        filesToUpload.forEach((f) => cfd.append("files", f));
-        const cres = await authFetch("/api/upload", { method: "POST", body: cfd });
-        const cdata = await cres.json();
-        uploadedColorUrls = cdata.urls || [];
-      }
-      let colorUrlIndex = 0;
-      const finalColorLinks = colorLinks.map((ci) => ({
-        image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
-        url: ci.url,
-      })).filter((x) => x.image && x.url);
-
-      await createMutation.mutateAsync({
-        name: form.name,
-        price: Number(form.price),
-        images: imagesArray,
-        imageAltTags: altTagsArray.length > 0 ? altTagsArray : undefined,
-        stock: Number(form.stock || 0),
-        category: selectedSub || form.category,
-        originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
-        saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
-        discount: form.discount ? Number(form.discount) : undefined,
-        colorLinks: finalColorLinks,
-      });
-      setForm(initialForm);
-      setSelectedSub("");
-      setThumbnailFile(null);
-      setFiles([null, null, null, null, null]);
-      setSelectedPreviewIndex(0);
-      setFilePickerIndex(null);
-      setColorItems([]);
-      setMainImageAlt("");
-      setImageAlts(["", "", "", "", ""]);
-      const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
-      if (thumbEl) thumbEl.value = "";
-      const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
-      if (multiEl) multiEl.value = "";
-    } catch (error) {
-      console.error("Create product error:", error);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && form.name && form.price) {
-      e.preventDefault();
-      handleCreateProduct();
-    }
-  };
-
   const addCategoryMutation = useMutation({
     mutationFn: async (name: string) => {
       const res = await authFetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
@@ -391,6 +290,109 @@ const Admin = () => {
   });
 
   const [adminSearchTerm, setAdminSearchTerm] = useState("");
+
+  function BestSellersManager({ products }: { products: Product[] }) {
+    const qc = useQueryClient();
+    const { data: current = [] } = useQuery<Product[]>({
+      queryKey: ["bestsellers"],
+      queryFn: async () => {
+        const res = await authFetch("/api/bestsellers");
+        return res.json();
+      },
+    });
+    const [slotIds, setSlotIds] = useState<string[]>(["", "", "", "", ""]);
+    useEffect(() => {
+      const ids = current.map((p) => p.id);
+      setSlotIds((["", "", "", "", ""]).map((_, i) => ids[i] || ""));
+    }, [current]);
+    const saveListMutation = useMutation({
+      mutationFn: async (ids: string[]) => {
+        const res = await authFetch("/api/bestsellers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        if (!res.ok) throw new Error("Save failed");
+        return res.json();
+      },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["bestsellers"] });
+        qc.refetchQueries({ queryKey: ["bestsellers"] });
+        toast("Bestsellers updated");
+      },
+    });
+    const delMutation = useMutation({
+      mutationFn: async (id: string) => {
+        const res = await authFetch(`/api/bestsellers/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Delete failed");
+        return res.json();
+      },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["bestsellers"] });
+        qc.refetchQueries({ queryKey: ["bestsellers"] });
+      },
+    });
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[0,1,2,3,4].map((idx) => {
+            const pid = slotIds[idx] || "";
+            const p = pid ? current.find((x) => x.id === pid) : undefined;
+            return (
+              <div key={`slot-${idx}`}>
+                <div className="flex gap-2 items-center mb-2">
+                  <select
+                    className="border rounded-md px-2 py-1 bg-background w-full"
+                    value={pid}
+                    onChange={(e) => setSlotIds((ids) => { const ni = [...ids]; ni[idx] = e.target.value; return ni; })}
+                  >
+                    <option value="">Select product</option>
+                    {products.map((pp) => (
+                      <option key={pp.id} value={pp.id}>{pp.name}</option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={() => {
+                      const arr = slotIds.map((x) => x).filter(Boolean);
+                      saveListMutation.mutate(arr);
+                    }}
+                    disabled={!slotIds[idx]}
+                  >Add</Button>
+                </div>
+                {p ? (
+                  <>
+                    <ProductCard product={p} compact />
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setSlotIds((ids) => { const ni = [...ids]; ni[idx] = ""; return ni; });
+                          const arr = slotIds.map((x, i) => (i === idx ? "" : x)).filter(Boolean);
+                          saveListMutation.mutate(arr);
+                        }}
+                      >Remove</Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center">
+                    <button
+                      type="button"
+                      className="h-12 w-12 rounded-full border bg-background flex items-center justify-center"
+                      onClick={() => slotIds[idx] && saveListMutation.mutate(slotIds.filter(Boolean))}
+                      disabled={!slotIds[idx]}
+                    >
+                      <Plus className="h-6 w-6" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   function CategoryTilesManager({ categories }: { categories: string[] }) {
     const qc = useQueryClient();
@@ -564,10 +566,6 @@ const Admin = () => {
 
   return (
     <div className="container px-4 py-8">
-      <Helmet>
-        <title>Admin Panel - Saree Elegance</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">Admin Panel</h1>
         <div className="flex items-center gap-2">
@@ -588,52 +586,27 @@ const Admin = () => {
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-card rounded-lg p-4 space-y-4">
           <h2 className="font-serif text-2xl font-bold">Add Product</h2>
-          <form onSubmit={(e) => { e.preventDefault(); handleCreateProduct(); }} className="space-y-4">
           <div>
             <Label>Name</Label>
-            <Input 
-              value={form.name} 
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              onKeyDown={handleKeyDown}
-            />
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
               <Label>Price</Label>
-              <Input 
-                type="number" 
-                value={form.price} 
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                onKeyDown={handleKeyDown}
-              />
+              <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             </div>
             <div>
               <Label>Discount (%)</Label>
-              <Input 
-                type="number" 
-                value={form.discount} 
-                onChange={(e) => setForm({ ...form, discount: e.target.value })}
-                onKeyDown={handleKeyDown}
-              />
+              <Input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} />
             </div>
             <div>
               <Label>Cutoff</Label>
-              <Input 
-                type="number" 
-                value={form.originalPrice} 
-                onChange={(e) => setForm({ ...form, originalPrice: e.target.value })}
-                onKeyDown={handleKeyDown}
-              />
+              <Input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} />
             </div>
             <div>
               <Label>Save Amount</Label>
-              <Input 
-                type="number" 
-                value={form.saveAmount} 
-                onChange={(e) => setForm({ ...form, saveAmount: e.target.value })}
-                onKeyDown={handleKeyDown}
-              />
+              <Input type="number" value={form.saveAmount} onChange={(e) => setForm({ ...form, saveAmount: e.target.value })} />
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -661,7 +634,7 @@ const Admin = () => {
                     <button
                       type="button"
                       className="absolute top-1 right-1 bg-background/70 rounded-md p-1"
-                      onClick={(e) => { e.stopPropagation(); setThumbnailFile(null); setMainImageAlt(""); }}
+                      onClick={(e) => { e.stopPropagation(); setThumbnailFile(null); }}
                       aria-label="Remove"
                     >
                       <X className="h-3 w-3" />
@@ -681,20 +654,6 @@ const Admin = () => {
                   setThumbnailFile(f);
                 }}
               />
-            </div>
-            <div className="mt-2">
-              <Label htmlFor="main-image-alt" className="text-xs text-muted-foreground">Alt Text (for SEO)</Label>
-              <Input
-                id="main-image-alt"
-                placeholder="e.g., Elegant red silk saree with golden embroidery"
-                value={mainImageAlt}
-                onChange={(e) => setMainImageAlt(e.target.value)}
-                className="mt-1"
-                disabled={!thumbnailFile && !form.images.trim()}
-              />
-              {!thumbnailFile && !form.images.trim() && (
-                <p className="text-xs text-muted-foreground mt-1">Upload an image first to add alt text</p>
-              )}
             </div>
           </div>
           <div>
@@ -717,7 +676,7 @@ const Admin = () => {
                       <button
                         type="button"
                         className="absolute top-1 right-1 bg-background/70 rounded-md p-1"
-                        onClick={(e) => { e.stopPropagation(); const next = [...files]; next[i] = null; setFiles(next); const nextAlts = [...imageAlts]; nextAlts[i] = ""; setImageAlts(nextAlts); }}
+                        onClick={(e) => { e.stopPropagation(); const next = [...files]; next[i] = null; setFiles(next); }}
                         aria-label="Remove"
                       >
                         <X className="h-3 w-3" />
@@ -743,28 +702,6 @@ const Admin = () => {
                 }}
               />
             </div>
-            <div className="mt-3 space-y-2">
-              <Label className="text-xs text-muted-foreground">Alt Text for Images (for SEO)</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {[0,1,2,3,4].map((i) => (
-                  <div key={i}>
-                    <Label htmlFor={`image-alt-${i}`} className="text-xs">Image {i + 1} {files[i] ? "" : "(not uploaded)"}</Label>
-                    <Input
-                      id={`image-alt-${i}`}
-                      placeholder={files[i] ? `e.g., ${form.name || "Product"} - view ${i + 1}` : "Upload image first to add alt text"}
-                      value={imageAlts[i] || ""}
-                      onChange={(e) => {
-                        const next = [...imageAlts];
-                        next[i] = e.target.value;
-                        setImageAlts(next);
-                      }}
-                      className="mt-1"
-                      disabled={!files[i]}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
           <div className="space-y-3">
             <Label>Color</Label>
@@ -772,12 +709,7 @@ const Admin = () => {
           </div>
           <div>
             <Label>Stock</Label>
-            <Input 
-              type="number" 
-              value={form.stock} 
-              onChange={(e) => setForm({ ...form, stock: e.target.value })}
-              onKeyDown={handleKeyDown}
-            />
+            <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
           </div>
           <div>
             <Label>Category</Label>
@@ -812,10 +744,74 @@ const Admin = () => {
               )}
             </div>
           </div>
-          <Button type="submit">
+          <Button
+            onClick={async () => {
+              let thumbUrl: string | null = null;
+              if (thumbnailFile) {
+                const tfd = new FormData();
+                tfd.append("files", thumbnailFile);
+                const tres = await authFetch("/api/upload", { method: "POST", body: tfd });
+                const tdata = await tres.json();
+                thumbUrl = (tdata.urls || [])[0] || null;
+              }
+              let uploaded: string[] = [];
+              const selected = files.filter(Boolean) as File[];
+              if (selected.length) {
+                const fd = new FormData();
+                selected.forEach((f) => fd.append("files", f));
+                const res = await authFetch("/api/upload", { method: "POST", body: fd });
+                const data = await res.json();
+                uploaded = data.urls || [];
+              }
+              const thumbInputUrl = form.images.trim();
+              const firstImage = thumbUrl || (thumbInputUrl ? thumbInputUrl : undefined);
+              const urls = [] as string[];
+              const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
+              // prepare colorLinks from editor state
+              const colorLinks = colorItems
+                .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
+                .filter((ci) => ci.file || ci.imageUrl);
+              const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!)
+              let uploadedColorUrls: string[] = [];
+              if (filesToUpload.length) {
+                const cfd = new FormData();
+                filesToUpload.forEach((f) => cfd.append("files", f));
+                const cres = await authFetch("/api/upload", { method: "POST", body: cfd });
+                const cdata = await cres.json();
+                uploadedColorUrls = cdata.urls || [];
+              }
+              let colorUrlIndex = 0;
+              const finalColorLinks = colorLinks.map((ci) => ({
+                image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
+                url: ci.url,
+              })).filter((x) => x.image && x.url);
+
+              await createMutation.mutateAsync({
+                name: form.name,
+                price: Number(form.price),
+                images: imagesArray,
+                stock: Number(form.stock || 0),
+                category: selectedSub || form.category,
+                originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
+                saveAmount: form.saveAmount ? Number(form.saveAmount) : undefined,
+                discount: form.discount ? Number(form.discount) : undefined,
+                colorLinks: finalColorLinks,
+              });
+              setForm(initialForm);
+              setSelectedSub("");
+              setThumbnailFile(null);
+              setFiles([null, null, null, null, null]);
+              setSelectedPreviewIndex(0);
+              setFilePickerIndex(null);
+              setColorItems([]);
+              const thumbEl = document.getElementById("thumb-file") as HTMLInputElement | null;
+              if (thumbEl) thumbEl.value = "";
+              const multiEl = document.getElementById("multi-file-picker") as HTMLInputElement | null;
+              if (multiEl) multiEl.value = "";
+            }}
+          >
             Create
           </Button>
-          </form>
         </div>
 
         <div className="bg-card rounded-lg p-4 space-y-4">
@@ -1103,11 +1099,7 @@ const Admin = () => {
         
       <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
         <h2 className="font-serif text-2xl font-bold">Best Sellers</h2>
-        <AdminBestSellersDialog />
-      </div>
-      <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
-        <h2 className="font-serif text-2xl font-bold">Featured Collection</h2>
-        <AdminFeaturedCollectionDialog />
+        <BestSellersManager products={products} />
       </div>
       <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
         <h2 className="font-serif text-2xl font-bold">Category Tiles</h2>

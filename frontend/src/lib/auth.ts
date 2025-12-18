@@ -31,8 +31,7 @@ const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 export { apiBase };
 
 export async function register(payload: { email: string; password: string; name?: string; invite?: string }) {
-  const url = apiBase ? `${apiBase}/api/auth/register` : "/api/auth/register";
-  const res = await fetch(url, {
+  const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -45,15 +44,13 @@ export async function register(payload: { email: string; password: string; name?
     throw new Error("REGISTRATION_FAILED");
   }
   const data = await res.json();
-  const role = data.user?.role || data.role || "user";
-  setToken(data.token, role);
+  setToken(data.token, data.role);
   await syncAccountStateAfterAuth();
   return data;
 }
 
 export async function login(payload: { email: string; password: string }) {
-  const url = apiBase ? `${apiBase}/api/auth/login` : "/api/auth/login";
-  const res = await fetch(url, {
+  const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -66,64 +63,16 @@ export async function login(payload: { email: string; password: string }) {
     throw new Error("LOGIN_FAILED");
   }
   const data = await res.json();
-  const role = data.user?.role || data.role || "user";
-  setToken(data.token, role);
+  setToken(data.token, data.role);
   await syncAccountStateAfterAuth();
   return data;
-}
-
-export async function forgotPassword(email: string) {
-  const url = apiBase ? `${apiBase}/api/auth/forgot-password` : "/api/auth/forgot-password";
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) {
-      // Only throw error for server errors, not for user not found (security)
-      if (res.status >= 500) {
-        throw new Error("FAILED");
-      }
-    }
-    return res.json();
-  } catch (e) {
-    // Network errors or other issues
-    if (e instanceof TypeError) {
-      throw new Error("NETWORK_ERROR");
-    }
-    throw e;
-  }
-}
-
-export async function resetPassword(token: string, password: string) {
-  const url = apiBase ? `${apiBase}/api/auth/reset-password` : "/api/auth/reset-password";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, password }),
-  });
-  if (!res.ok) {
-    let msg = "";
-    try { msg = (await res.json()).error || ""; } catch (err) { void err; }
-    if (res.status === 400 || res.status === 401) throw new Error("INVALID_TOKEN");
-    throw new Error("FAILED");
-  }
-  return res.json();
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const token = getToken();
   const headers = new Headers(init.headers || {});
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  
-  // Handle relative URLs with apiBase
-  let url = input;
-  if (typeof input === "string" && input.startsWith("/") && apiBase) {
-    url = `${apiBase}${input}`;
-  }
-  
-  return fetch(url, { ...init, headers });
+  return fetch(input, { ...init, headers });
 }
 
 import { syncCartFromServer } from "@/lib/cart";

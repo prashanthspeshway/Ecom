@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import HeroCarousel from "@/components/HeroCarousel";
 import ProductCard from "@/components/ProductCard";
 import { categories, leninSubcategories } from "@/data/products";
@@ -26,53 +25,31 @@ const Home = () => {
       return res.json();
     },
   });
-  const { data: featured = [] } = useQueryRQ<Product[]>({
-    queryKey: ["featured-collection"],
-    queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/featured`);
-      return res.json();
-    },
-  });
   return (
     <div>
-      <Helmet>
-        <title>Saree Elegance - Premium Indian Sarees & Traditional Wear Online</title>
-        <meta name="description" content="Discover exquisite collection of premium Indian sarees, traditional wear, and designer ethnic fashion. Shop authentic handcrafted sarees with free shipping and easy returns." />
-        <meta name="keywords" content="sarees, indian sarees, designer sarees, traditional wear, ethnic fashion, silk sarees, cotton sarees, bridal sarees, online saree shopping" />
-        <meta property="og:title" content="Saree Elegance - Premium Indian Sarees & Traditional Wear" />
-        <meta property="og:description" content="Discover exquisite collection of premium Indian sarees, traditional wear, and designer ethnic fashion." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://ecom-one-wheat.vercel.app/" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Saree Elegance - Premium Indian Sarees" />
-        <meta name="twitter:description" content="Discover exquisite collection of premium Indian sarees and traditional wear." />
-        <link rel="canonical" href="https://ecom-one-wheat.vercel.app/" />
-      </Helmet>
       <HeroCarousel />
 
       {/* Categories Tiles */}
       <CategoryTilesSection />
 
       {/* Featured Products */}
-      {featured.length > 0 && (
-        <section className="py-16">
-          <div className="container px-4">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="font-serif text-3xl md:text-4xl font-bold">
-                Featured Collection
-              </h2>
-              <Link to="/products">
-                <Button variant="outline">View All</Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {featured.slice(0, 5).map((product) => (
-                <ProductCard key={product.id} product={product} compact />
-              ))}
-            </div>
+      <section className="py-16">
+        <div className="container px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold">
+              Featured Collection
+            </h2>
+            <Link to="/products">
+              <Button variant="outline">View All</Button>
+            </Link>
           </div>
-        </section>
-      )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {data?.slice(0, 5).map((product) => (
+              <ProductCard key={product.id} product={product} compact />
+            ))}
+          </div>
+        </div>
+      </section>
 
       {banners.length > 0 && (
         <section className="py-12">

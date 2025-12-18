@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,41 +136,9 @@ const AdminProducts = () => {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [editOriginalPrice, setEditOriginalPrice] = useState<string>("");
   const [editSaveAmount, setEditSaveAmount] = useState<string>("");
-  const [editOnSale, setEditOnSale] = useState<boolean>(false);
-  const [editIsBestSeller, setEditIsBestSeller] = useState<boolean>(false);
-
-  const handleSaveProduct = (productId: string) => {
-    updateMutation.mutate({
-      id: productId,
-      payload: {
-        price: Number(edit.price),
-        stock: Number(edit.stock),
-        discount: edit.discount ? Number(edit.discount) : undefined,
-        name: editName,
-        category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
-        images: editImages,
-        originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
-        saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
-        onSale: editOnSale,
-        isBestSeller: editIsBestSeller,
-      },
-    });
-    setEditingId(null);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent, productId: string) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSaveProduct(productId);
-    }
-  };
 
   return (
     <div className="container px-4 py-8">
-      <Helmet>
-        <title>Manage Products - Admin | Saree Elegance</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">Manage Products</h1>
         <div className="flex items-center gap-2">
@@ -260,15 +227,13 @@ const AdminProducts = () => {
             <div key={p.id} className="border rounded-lg p-4 relative">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.imageAltTags?.[0] || p.name} className="w-20 h-20 rounded-md object-cover border" />
+                  <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.name} className="w-20 h-20 rounded-md object-cover border" />
                   <div>
                     <p className="font-semibold">{p.name}</p>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2">
                       <Badge variant="outline">₹{p.price}</Badge>
                       <Badge variant="secondary">{p.stock} in stock</Badge>
                       {p.discount && <Badge>{p.discount}% OFF</Badge>}
-                      {p.onSale && <Badge className="bg-red-600 text-white">On Sale</Badge>}
-                      {p.isBestSeller && <Badge className="bg-green-600 text-white">Best Seller</Badge>}
                     </div>
                   </div>
                 </div>
@@ -288,8 +253,6 @@ const AdminProducts = () => {
                     setEditImages((p.images || []).filter((u) => typeof u === "string" && u && !String(u).startsWith("blob:")));
                     setEditOriginalPrice(p.originalPrice ? String(p.originalPrice) : "");
                     setEditSaveAmount(p.saveAmount ? String(p.saveAmount) : "");
-                    setEditOnSale(p.onSale ?? false);
-                    setEditIsBestSeller(p.isBestSeller ?? false);
                   }}
                 >
                   <Plus className="h-4 w-4" />
@@ -300,81 +263,30 @@ const AdminProducts = () => {
               </div>
 
               {editingId === p.id && (
-                <form onSubmit={(e) => { e.preventDefault(); handleSaveProduct(p.id); }} className="mt-4 grid sm:grid-cols-3 gap-4">
+                <div className="mt-4 grid sm:grid-cols-3 gap-4">
                   <div>
                     <Label>Price</Label>
-                    <Input 
-                      type="number" 
-                      value={edit.price} 
-                      onChange={(e) => setEdit({ ...edit, price: e.target.value })}
-                      onKeyDown={(e) => handleKeyDown(e, p.id)}
-                    />
+                    <Input type="number" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} />
                   </div>
                   <div>
                     <Label>Stock</Label>
-                    <Input 
-                      type="number" 
-                      value={edit.stock} 
-                      onChange={(e) => setEdit({ ...edit, stock: e.target.value })}
-                      onKeyDown={(e) => handleKeyDown(e, p.id)}
-                    />
+                    <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} />
                   </div>
                   <div>
                     <Label>Discount (%)</Label>
-                    <Input 
-                      type="number" 
-                      value={edit.discount} 
-                      onChange={(e) => setEdit({ ...edit, discount: e.target.value })}
-                      onKeyDown={(e) => handleKeyDown(e, p.id)}
-                    />
+                    <Input type="number" value={edit.discount} onChange={(e) => setEdit({ ...edit, discount: e.target.value })} />
                   </div>
                   <div>
                     <Label>Cutoff</Label>
-                    <Input 
-                      type="number" 
-                      value={editOriginalPrice} 
-                      onChange={(e) => setEditOriginalPrice(e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, p.id)}
-                    />
+                    <Input type="number" value={editOriginalPrice} onChange={(e) => setEditOriginalPrice(e.target.value)} />
                   </div>
                   <div>
                     <Label>Save Amount</Label>
-                    <Input 
-                      type="number" 
-                      value={editSaveAmount} 
-                      onChange={(e) => setEditSaveAmount(e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, p.id)}
-                    />
+                    <Input type="number" value={editSaveAmount} onChange={(e) => setEditSaveAmount(e.target.value)} />
                   </div>
                   <div>
                     <Label>Name</Label>
-                    <Input 
-                      value={editName} 
-                      onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, p.id)}
-                    />
-                  </div>
-                  <div className="sm:col-span-3 flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="checkbox" 
-                        id={`onSale-${p.id}`}
-                        checked={editOnSale} 
-                        onChange={(e) => setEditOnSale(e.target.checked)} 
-                        className="w-4 h-4"
-                      />
-                      <Label htmlFor={`onSale-${p.id}`} className="cursor-pointer">On Sale</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="checkbox" 
-                        id={`isBestSeller-${p.id}`}
-                        checked={editIsBestSeller} 
-                        onChange={(e) => setEditIsBestSeller(e.target.checked)} 
-                        className="w-4 h-4"
-                      />
-                      <Label htmlFor={`isBestSeller-${p.id}`} className="cursor-pointer">Best Seller</Label>
-                    </div>
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                   </div>
                   <div className="sm:col-span-3 flex items-center gap-3">
                     {editOriginalPrice && (
@@ -442,12 +354,29 @@ const AdminProducts = () => {
                     </div>
                   </div>
                   <div className="sm:col-span-3 flex gap-2">
-                    <Button type="submit">
+                    <Button
+                      onClick={() => {
+                        updateMutation.mutate({
+                          id: p.id,
+                          payload: {
+                            price: Number(edit.price),
+                            stock: Number(edit.stock),
+                            discount: edit.discount ? Number(edit.discount) : undefined,
+                            name: editName,
+                            category: (editCategory.toLowerCase() === "lenin" && selectedLeninSub) ? selectedLeninSub : editCategory,
+                            images: editImages,
+                            originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
+                            saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
+                          },
+                        });
+                        setEditingId(null);
+                      }}
+                    >
                       Save Changes
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
                   </div>
-                </form>
+                </div>
               )}
             </div>
           ))}

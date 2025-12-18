@@ -1,17 +1,5 @@
 node_modules
-dist
-dist-ssr
-
-# Environment variables
 .env
-.env.local
-.env.*.local
-backend/.env
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.production.local
-
 # Logs
 logs
 *.log
@@ -20,6 +8,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+backend/.env
 
 # Editor directories and files
 .vscode/*
@@ -31,10 +26,3 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
-
-# Vercel
-.vercel
-
-# Uploads
-backend/uploads/*
-!backend/uploads/.gitkeep

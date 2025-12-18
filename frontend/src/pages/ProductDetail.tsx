@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
-import { Heart, Share2, ShoppingCart, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Share2, ShoppingCart, Star, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getProduct, getProducts } from "@/lib/api";
 import type { Product } from "@/types/product";
@@ -14,10 +13,11 @@ import { addToCart } from "@/lib/cart";
 import { authFetch, getToken } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toggleWishlist, isWishlisted } from "@/lib/wishlist";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const { data: product } = useQuery<Product | undefined>({
+  const { data: product, isLoading } = useQuery<Product | undefined>({
     queryKey: ["product", id],
     queryFn: () => (id ? getProduct(id) : Promise.resolve(undefined)),
   });
@@ -51,6 +51,54 @@ const ProductDetail = () => {
     })();
   }, [id]);
 
+  if (isLoading) {
+    return (
+      <div className="container px-4 py-16">
+        <div className="grid md:grid-cols-[88px_minmax(0,520px)_1fr] gap-4 mb-16">
+          <div className="hidden md:flex md:flex-col gap-1">
+            {[...Array(4)].map((_, index) => (
+              <Skeleton key={index} className="w-full aspect-square rounded-md" />
+            ))}
+          </div>
+          <div>
+            <Skeleton className="mb-4 aspect-square max-w-[520px] rounded-lg" />
+            <div className="md:hidden flex gap-2 overflow-x-auto pb-2">
+              {[...Array(4)].map((_, index) => (
+                <Skeleton key={index} className="flex-shrink-0 w-16 h-16 rounded-md" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <Skeleton className="h-10 w-3/4 mb-2" />
+              <Skeleton className="h-5 w-1/2" />
+            </div>
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-8 w-40" />
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-48" />
+              <div className="flex gap-2 max-w-sm">
+                <Skeleton className="h-10 flex-1" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Skeleton className="h-12 flex-1" />
+              <Skeleton className="h-12 w-12" />
+              <Skeleton className="h-12 w-12" />
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="container px-4 py-16 text-center">
@@ -65,30 +113,8 @@ const ProductDetail = () => {
   const relatedProducts = (all || []).filter((p) => p.id !== id).slice(0, 4);
   const images = (product?.images || []).filter((u) => typeof u === "string" && u && !u.startsWith("blob:"));
 
-  const productImage = product.images?.[0] || "/placeholder.svg";
-  const productPrice = product.originalPrice || product.price || 0;
-  const productName = product.name || "Product";
-  const productDescription = product.details || product.descriptionSections?.productSpecifications || `${productName} - Premium quality ${product.category || ""} saree. ${product.fabrics?.join(", ") || ""}`;
-
   return (
     <div>
-      <Helmet>
-        <title>{`${productName} - ₹${productPrice.toLocaleString()} | Saree Elegance`}</title>
-        <meta name="description" content={productDescription.substring(0, 160)} />
-        <meta name="keywords" content={`${productName}, ${product.category || ""}, ${product.fabrics?.join(", ") || ""}, saree, indian saree, designer saree`} />
-        <meta property="og:title" content={`${productName} - Saree Elegance`} />
-        <meta property="og:description" content={productDescription.substring(0, 200)} />
-        <meta property="og:type" content="product" />
-        <meta property="og:url" content={`https://ecom-one-wheat.vercel.app/product/${product.id}`} />
-        <meta property="og:image" content={productImage} />
-        <meta property="product:price:amount" content={String(productPrice)} />
-        <meta property="product:price:currency" content="INR" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={productName} />
-        <meta name="twitter:description" content={productDescription.substring(0, 200)} />
-        <meta name="twitter:image" content={productImage} />
-        <link rel="canonical" href={`https://ecom-one-wheat.vercel.app/product/${product.id}`} />
-      </Helmet>
       <div className="container px-4 py-8">
         <div className="grid md:grid-cols-[88px_minmax(0,520px)_1fr] gap-4 mb-16">
           <div className="hidden md:flex md:flex-col gap-1">
@@ -102,7 +128,7 @@ const ProductDetail = () => {
               >
                 <img
                   src={image || "/placeholder.svg"}
-                  alt={product.imageAltTags?.[index] || `${product.name} ${index + 1}`}
+                  alt={`${product.name} ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
               </button>
@@ -113,7 +139,7 @@ const ProductDetail = () => {
             <div className="relative mb-4 aspect-square max-w-[520px] bg-card rounded-lg overflow-hidden">
               <img
                 src={(images && images[selectedImage]) || "/placeholder.svg"}
-                alt={product.imageAltTags?.[selectedImage] || product.name}
+                alt={product.name}
                 className="w-full h-full object-cover"
               />
               {product.discount && (
@@ -167,7 +193,7 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-sm text-muted-foreground">
-                {product.rating} ({product.reviews?.length || 0} reviews)
+                {product.rating} ({product.reviews.length} reviews)
               </span>
             </div>
 
@@ -268,7 +294,7 @@ const ProductDetail = () => {
           <TabsList className="w-full justify-start">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="care">Care Instructions</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews ({product.reviews?.length || 0})</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews ({product.reviews.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="mt-6 space-y-6">
             
@@ -296,8 +322,8 @@ const ProductDetail = () => {
             <p className="text-muted-foreground">{product.care}</p>
           </TabsContent>
           <TabsContent value="reviews" className="mt-6 space-y-6">
-            {(product.reviews?.length || 0) > 0 ? (
-              (product.reviews || []).map((review) => (
+            {product.reviews.length > 0 ? (
+              product.reviews.map((review) => (
                 <div key={review.id} className="border-b pb-6">
                   <div className="flex items-center justify-between mb-2">
                     <div>
