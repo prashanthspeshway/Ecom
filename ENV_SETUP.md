@@ -30,11 +30,14 @@ Located in: `backend/.env`
 
 ### Required Variables:
 - `PORT` - Server port (default: 3001)
+- `NODE_ENV` - Environment mode (`development` or `production`)
 - `MONGO_URI` - MongoDB connection string (optional - leave empty for file-based storage)
 - `DB_NAME` - Database name (default: ecom)
-- `JWT_SECRET` - Secret for JWT token signing (CHANGE IN PRODUCTION!)
+- `JWT_SECRET` - Secret for JWT token signing (CHANGE IN PRODUCTION! Use 32+ character random string)
 - `ADMIN_INVITE_CODE` - Code users enter during registration to become admin
 - `PUBLIC_BASE_URL` - Public base URL for file uploads (optional)
+- `FRONTEND_URL` - Frontend URL for CORS and password reset links
+- `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (optional, defaults to FRONTEND_URL)
 - `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` - AWS S3 config (optional)
 
 ### SMTP Configuration (for Password Reset):
@@ -50,14 +53,17 @@ Located in: `backend/.env`
 - `RAZORPAY_KEY_ID` - Your Razorpay Key ID (from Razorpay Dashboard)
 - `RAZORPAY_KEY_SECRET` - Your Razorpay Key Secret (from Razorpay Dashboard)
 
-### Example:
+### Development Example:
 ```env
 PORT=3001
+NODE_ENV=development
 MONGO_URI=
 DB_NAME=ecom
-JWT_SECRET=change-me-in-production-use-a-strong-random-string
+JWT_SECRET=dev-secret-change-in-production
 ADMIN_INVITE_CODE=
 PUBLIC_BASE_URL=
+FRONTEND_URL=http://localhost:8080
+ALLOWED_ORIGINS=http://localhost:8080,http://localhost:5173
 S3_BUCKET=
 S3_REGION=
 S3_ACCESS_KEY_ID=
@@ -70,11 +76,39 @@ SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 SMTP_FROM=your-email@gmail.com
-FRONTEND_URL=http://localhost:8080
 
 # Razorpay Configuration
-RAZORPAY_KEY_ID=your-razorpay-key-id
-RAZORPAY_KEY_SECRET=your-razorpay-key-secret
+RAZORPAY_KEY_ID=your-razorpay-test-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-test-key-secret
+```
+
+### Production Example:
+```env
+PORT=3001
+NODE_ENV=production
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/ecom
+DB_NAME=ecom
+JWT_SECRET=your-super-secret-32-character-minimum-random-string
+ADMIN_INVITE_CODE=your-secure-admin-code
+PUBLIC_BASE_URL=https://yourdomain.com
+FRONTEND_URL=https://yourdomain.com
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+S3_BUCKET=your-production-bucket
+S3_REGION=ap-south-1
+S3_ACCESS_KEY_ID=your-production-access-key
+S3_SECRET_ACCESS_KEY=your-production-secret-key
+
+# SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@gmail.com
+
+# Razorpay Configuration (use LIVE keys in production)
+RAZORPAY_KEY_ID=your-razorpay-live-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-live-key-secret
 ```
 
 **Note for Gmail users**: You need to use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password. Enable 2-Step Verification first, then generate an app password.
