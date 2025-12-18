@@ -217,6 +217,7 @@ function ReviewBox({ productId }: { productId: string }) {
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState<(File | null)[]>([null, null, null]);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   async function submit() {
     try {
@@ -239,10 +240,19 @@ function ReviewBox({ productId }: { productId: string }) {
       });
       if (!res.ok) { toast("Failed to submit review"); setSubmitting(false); return; }
       toast("Review submitted");
+      setSubmitted(true);
       setRating(0); setHover(0); setComment(""); setFiles([null, null, null]);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (submitted) {
+    return (
+      <div className="mt-6 border-t pt-4">
+        <div className="text-sm text-muted-foreground">Review submitted successfully</div>
+      </div>
+    );
   }
 
   return (
