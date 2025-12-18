@@ -1087,10 +1087,13 @@ const Admin = () => {
                 uploadedColorUrls = cdata.urls || [];
               }
               let colorUrlIndex = 0;
-              const finalColorLinks = colorLinks.map((ci) => ({
-                image: ci.file ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
-                url: ci.url,
-              })).filter((x) => x.image && x.url);
+              const finalColorLinks = colorItems.map((ci) => {
+                const hasFile = !!ci.file;
+                return {
+                  image: hasFile ? uploadedColorUrls[colorUrlIndex++] : (ci.imageUrl || ""),
+                  url: ci.url,
+                };
+              }).filter((x) => x.image && x.url);
 
               await createMutation.mutateAsync({
                 name: form.name,
