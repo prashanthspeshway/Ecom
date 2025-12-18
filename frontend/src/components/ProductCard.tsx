@@ -38,7 +38,7 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
           )}
           <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full" onClick={(e) => { e.preventDefault(); toggleWishlist(product); setWish(!wish); }}>
-              <Heart className={`h-4 w-4 ${wish ? "text-primary" : ""}`} />
+              <Heart className={`h-4 w-4 ${wish ? "text-red-500 fill-red-500" : "text-muted-foreground"}`} />
             </Button>
           </div>
         </div>

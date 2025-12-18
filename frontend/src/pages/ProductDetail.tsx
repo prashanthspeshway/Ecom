@@ -291,7 +291,7 @@ const ProductDetail = () => {
                 Add to Cart
               </Button>
               <Button size="lg" variant="outline" onClick={() => { toggleWishlist(product); setWish(!wish); }}>
-                <Heart className={`h-5 w-5 ${wish ? "text-primary" : ""}`} />
+                <Heart className={`h-5 w-5 ${wish ? "text-red-500 fill-red-500" : "text-muted-foreground"}`} />
               </Button>
               <Button size="lg" variant="outline">
                 <Share2 className="h-5 w-5" />
