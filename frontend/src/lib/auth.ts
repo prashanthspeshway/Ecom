@@ -22,7 +22,8 @@ export async function syncRoleFromBackend(): Promise<string | null> {
     const token = getToken();
     if (!token) return null;
     
-    const res = await authFetch("/api/auth/me");
+    const apiUrl = apiBase ? `${apiBase}/api/auth/me` : "/api/auth/me";
+    const res = await authFetch(apiUrl);
     if (res.ok) {
       const data = await res.json();
       const role = data.role || data.user?.role || null;
