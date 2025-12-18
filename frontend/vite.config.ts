@@ -15,28 +15,19 @@ export default defineConfig(async ({ mode }) => {
       const mod = await import("lovable-tagger");
       if (mod?.componentTagger) plugins.push(mod.componentTagger());
     } catch (e) { void e; }
+    
+    // Filter console errors for ECONNREFUSED proxy errors
+    const originalError = console.error;
+    console.error = (...args: any[]) => {
+      const message = args.join(" ");
+      if (message.includes("http proxy error") && message.includes("ECONNREFUSED")) {
+        return; // Suppress ECONNREFUSED proxy errors
+      }
+      originalError.apply(console, args);
+    };
   }
   return {
     base,
-    customLogger: {
-      info: (msg: any) => {
-        // Filter out proxy ECONNREFUSED errors
-        if (typeof msg === "string" && msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
-          return;
-        }
-        console.log(msg);
-      },
-      warn: (msg: any) => console.warn(msg),
-      error: (msg: any) => {
-        // Filter out proxy ECONNREFUSED errors
-        if (typeof msg === "string" && msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
-          return;
-        }
-        console.error(msg);
-      },
-      clearScreen: () => {},
-      hasErrorLogged: () => false,
-    },
     server: {
       host: "::",
       port: 8080,
