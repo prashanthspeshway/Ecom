@@ -19,6 +19,17 @@ const Checkout = () => {
     const t = getToken();
     if (!t) { navigate(`/login?redirect=${encodeURIComponent("/checkout")}`); return; }
     authFetch("/api/cart").then(async (res) => { if (!res.ok) return; const data = await res.json(); setItems(data || []); });
+    
+    // Load Razorpay script
+    if (!(window as any).Razorpay) {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => setRazorpayLoaded(true);
+      document.body.appendChild(script);
+    } else {
+      setRazorpayLoaded(true);
+    }
   }, [navigate]);
 
   const subtotal = useMemo(() => items.reduce((s, it) => s + Number(it.product.price || 0) * it.quantity, 0), [items]);
