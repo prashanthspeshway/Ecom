@@ -518,6 +518,13 @@ function saveBestsellersToFile() {
     fs.writeFileSync(bestsellersPath, JSON.stringify(bestsellerIds, null, 2));
   } catch {}
 }
+
+function saveFeaturedToFile() {
+  try {
+    fs.writeFileSync(featuredPath, JSON.stringify(featuredIds, null, 2));
+  } catch {}
+}
+
 function saveSubcategoriesToFile() {
   try {
     fs.writeFileSync(subcategoriesPath, JSON.stringify(subcategories, null, 2));
