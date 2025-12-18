@@ -134,19 +134,40 @@ const Admin = () => {
     );
   }
 
-  // Check authorization - use both state and direct check for reliability
+  // Check authorization - be more lenient to prevent blank pages
   const currentRole = getRole();
   const hasToken = getToken();
-  // Allow access if either state says authorized OR localStorage has admin role
-  const isAdmin = isAuthorized || currentRole === "admin";
   
-  if (!isAdmin || !hasToken) {
-    // Still show something instead of blank page
+  // If we're still checking, show loading
+  if (isChecking) {
+    return (
+      <div className="container px-4 py-16 text-center">
+        <p>Verifying admin access...</p>
+      </div>
+    );
+  }
+  
+  // Allow access if we have admin role in localStorage OR if authorized
+  // This prevents blank pages if backend check is slow
+  const isAdmin = currentRole === "admin" || isAuthorized;
+  
+  if (!hasToken) {
+    return (
+      <div className="container px-4 py-16 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Not Authenticated</h1>
+        <p>Please log in to access the admin panel.</p>
+        <Button onClick={() => navigate("/login")}>Go to Login</Button>
+      </div>
+    );
+  }
+  
+  if (!isAdmin) {
     return (
       <div className="container px-4 py-16 text-center space-y-4">
         <h1 className="text-2xl font-bold">Access Denied</h1>
         <p>You need admin privileges to access this page.</p>
-        <p className="text-sm text-muted-foreground">Redirecting to login...</p>
+        <p className="text-sm text-muted-foreground">Current role: {currentRole || "none"}</p>
+        <Button onClick={() => navigate("/account")}>Go to Account</Button>
       </div>
     );
   }
