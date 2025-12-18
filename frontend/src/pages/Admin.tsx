@@ -661,18 +661,28 @@ const Admin = () => {
               const pid = slotIds[idx] || "";
               const p = pid ? current.find((x) => x.id === pid) : undefined;
               return (
-                <div key={`slot-${idx}`}>
+                <div key={`slot-${idx}`} className="relative">
                   {p ? (
-                    <>
-                      <ProductCard product={p} compact />
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleRemove(idx)}
-                        >Remove</Button>
-                      </div>
-                    </>
+                    <div className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border">
+                      <img
+                        src={(p.images?.[0] && !String(p.images[0]).startsWith("blob:")) 
+                          ? p.images[0] 
+                          : "/placeholder.svg"}
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemove(idx);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ) : (
                     <div 
                       className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-accent transition-colors"
