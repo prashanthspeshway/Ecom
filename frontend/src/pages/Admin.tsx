@@ -1074,9 +1074,7 @@ const Admin = () => {
               const urls = [] as string[];
               const imagesArray = firstImage ? [firstImage, ...uploaded, ...urls] : [...uploaded, ...urls];
               // prepare colorLinks from editor state
-              const colorLinks = colorItems
-                .map((ci) => ({ image: ci.imageUrl || "", file: ci.file, url: ci.url }))
-                .filter((ci) => ci.file || ci.imageUrl);
+              const colorLinks = colorItems.filter((ci) => ci.file || ci.imageUrl);
               const filesToUpload = colorLinks.filter((ci) => ci.file).map((ci) => ci.file!)
               let uploadedColorUrls: string[] = [];
               if (filesToUpload.length) {
