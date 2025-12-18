@@ -120,6 +120,103 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
     }
   });
 
+  // Add review to product
+  router.post("/:id/reviews", authMiddleware, async (req, res) => {
+    try {
+      const productId = req.params.id;
+      const { rating, comment, images } = req.body || {};
+      
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+
+      const db = getDb();
+      if (db) {
+        // Find product
+        let product = await db.collection("products").findOne({ id: productId });
+        if (!product && /^\d+$/.test(productId)) {
+          product = await db.collection("products").findOne({ id: Number(productId) });
+        }
+        if (!product && /^\d+$/.test(productId)) {
+          product = await db.collection("products").findOne({ id: String(Number(productId)) });
+        }
+        if (!product) return res.status(404).json({ error: "Product not found" });
+
+        // Get user info
+        const user = await db.collection("users").findOne({ email: req.user.email });
+        const author = user?.name || user?.email || req.user.email;
+
+        // Create review
+        const review = {
+          id: String(Date.now()),
+          author: author,
+          rating: Number(rating),
+          comment: comment || "",
+          images: Array.isArray(images) ? images : [],
+          date: new Date().toISOString().split("T")[0],
+        };
+
+        // Add review to product
+        const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+        reviews.push(review);
+
+        // Update product
+        await db.collection("products").updateOne(
+          { id: product.id },
+          { $set: { reviews: reviews } }
+        );
+
+        return res.json(review);
+      }
+
+      // File-based storage
+      const products = getProducts();
+      let product = products.find((p) => p.id === productId || String(p.id) === String(productId));
+      if (!product && /^\d+$/.test(productId)) {
+        product = products.find((p) => Number(p.id) === Number(productId));
+      }
+      if (!product) return res.status(404).json({ error: "Product not found" });
+
+      // Get user info from orders to find name
+      const orders = getOrders();
+      const userOrders = Object.values(orders).flat().filter((o: any) => o.user === req.user.email);
+      let author = req.user.email;
+      if (userOrders.length > 0 && userOrders[0].shipping) {
+        const shipping = userOrders[0].shipping as any;
+        if (shipping.first || shipping.last) {
+          author = [shipping.first, shipping.last].filter(Boolean).join(" ") || req.user.email;
+        }
+      }
+
+      // Create review
+      const review = {
+        id: String(Date.now()),
+        author: author,
+        rating: Number(rating),
+        comment: comment || "",
+        images: Array.isArray(images) ? images : [],
+        date: new Date().toISOString().split("T")[0],
+      };
+
+      // Add review to product
+      const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+      reviews.push(review);
+
+      // Update product
+      const idx = products.findIndex((p) => p.id === product.id);
+      if (idx >= 0) {
+        products[idx] = { ...products[idx], reviews: reviews };
+        setProducts(products);
+        saveProducts();
+      }
+
+      res.json(review);
+    } catch (e) {
+      console.error("Review submission error:", e);
+      res.status(500).json({ error: "Failed to submit review" });
+    }
+  });
+
   app.use("/api/products", router);
 }
 
