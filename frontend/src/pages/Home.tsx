@@ -25,6 +25,13 @@ const Home = () => {
       return res.json();
     },
   });
+  const { data: featured = [] } = useQueryRQ<Product[]>({
+    queryKey: ["featured"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/featured`, { headers: {} });
+      return res.json();
+    },
+  });
   return (
     <div>
       <HeroCarousel />
@@ -33,23 +40,25 @@ const Home = () => {
       <CategoryTilesSection />
 
       {/* Featured Products */}
-      <section className="py-16">
-        <div className="container px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold">
-              Featured Collection
-            </h2>
-            <Link to="/products">
-              <Button variant="outline">View All</Button>
-            </Link>
+      {featured.length > 0 && (
+        <section className="py-16">
+          <div className="container px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold">
+                Featured Collection
+              </h2>
+              <Link to="/products">
+                <Button variant="outline">View All</Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {featured.filter(p => p && p.id).slice(0, 5).map((product) => (
+                <ProductCard key={product.id} product={product} compact />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {data?.filter(p => p && p.id).slice(0, 5).map((product) => (
-              <ProductCard key={product.id} product={product} compact />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {banners.length > 0 && (
         <section className="py-12">

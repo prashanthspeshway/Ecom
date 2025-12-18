@@ -17,6 +17,7 @@ import registerAuth from "./routes/auth.js";
 import registerUpload from "./routes/upload.js";
 import registerBanners from "./routes/banners.js";
 import registerBestsellers from "./routes/bestsellers.js";
+import registerFeatured from "./routes/featured.js";
 import registerCart from "./routes/cart.js";
 import registerOrders from "./routes/orders.js";
 import registerAdminOrders from "./routes/adminOrders.js";
@@ -54,6 +55,8 @@ const bannersPath = path.join(__dirname, "data", "banners.json");
 let banners = [];
 const bestsellersPath = path.join(__dirname, "data", "bestsellers.json");
 let bestsellerIds = [];
+const featuredPath = path.join(__dirname, "data", "featured.json");
+let featuredIds = [];
 const subcategoriesPath = path.join(__dirname, "data", "subcategories.json");
 let subcategories = {};
 const cartsPath = path.join(__dirname, "data", "carts.json");
@@ -104,6 +107,14 @@ function loadData() {
     bestsellerIds = [];
     try { fs.mkdirSync(path.dirname(bestsellersPath), { recursive: true }); } catch {}
     try { fs.writeFileSync(bestsellersPath, JSON.stringify(bestsellerIds, null, 2)); } catch {}
+  }
+  try {
+    const raw = fs.readFileSync(featuredPath, "utf-8");
+    featuredIds = JSON.parse(raw);
+  } catch (e) {
+    featuredIds = [];
+    try { fs.mkdirSync(path.dirname(featuredPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(featuredPath, JSON.stringify(featuredIds, null, 2)); } catch {}
   }
   try {
     const raw = fs.readFileSync(subcategoriesPath, "utf-8");
@@ -219,6 +230,10 @@ async function initDb() {
       const bestColl = db.collection("bestsellers");
       if (await bestColl.countDocuments() === 0 && Array.isArray(bestsellerIds) && bestsellerIds.length) {
         await bestColl.insertMany(bestsellerIds.map((id) => ({ id })));
+      }
+      const featuredColl = db.collection("featured");
+      if (await featuredColl.countDocuments() === 0 && Array.isArray(featuredIds) && featuredIds.length) {
+        await featuredColl.insertMany(featuredIds.map((id) => ({ id })));
       }
       const pagesColl = db.collection("pages");
       if (await pagesColl.countDocuments() === 0 && Array.isArray(pages) && pages.length) {
@@ -392,6 +407,16 @@ initDb().finally(() => {
       getBestsellers: () => bestsellerIds,
       setBestsellers: (arr) => { bestsellerIds = arr; },
       saveBestsellers: saveBestsellersToFile,
+      getProducts: () => products,
+    });
+    registerFeatured({
+      app,
+      getDb: () => db,
+      authMiddleware,
+      adminOnly,
+      getFeatured: () => featuredIds,
+      setFeatured: (arr) => { featuredIds = arr; },
+      saveFeatured: saveFeaturedToFile,
       getProducts: () => products,
     });
     registerCart({
