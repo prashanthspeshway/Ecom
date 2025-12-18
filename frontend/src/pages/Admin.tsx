@@ -25,6 +25,7 @@ const Admin = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
     
     (async () => {
       const token = getToken();
@@ -35,7 +36,17 @@ const Admin = () => {
         return;
       }
       
-      // Verify role from backend to ensure it's correct
+      // Check localStorage first for faster initial load
+      const currentRole = getRole();
+      if (currentRole === "admin") {
+        // Set authorized immediately if we have admin role in localStorage
+        if (isMounted) {
+          setIsAuthorized(true);
+          setIsChecking(false);
+        }
+      }
+      
+      // Then verify with backend (but don't block if we already have admin role)
       try {
         const res = await authFetch("/api/auth/me");
         if (res.ok) {
@@ -43,7 +54,6 @@ const Admin = () => {
           const backendRole = data.role || data.user?.role || null;
           if (backendRole && backendRole !== "undefined") {
             // Update localStorage if different
-            const currentRole = getRole();
             if (backendRole !== currentRole) {
               localStorage.setItem("auth_role", backendRole);
               if (isMounted) {
@@ -55,38 +65,37 @@ const Admin = () => {
                 setIsAuthorized(true);
                 setIsChecking(false);
               }
-              return;
             } else {
+              // Not admin, redirect
               if (isMounted) {
                 navigate("/login");
               }
-              return;
             }
           } else {
-            // Role not found in backend, redirect to login
+            // Role not found in backend
+            if (currentRole !== "admin") {
+              if (isMounted) {
+                navigate("/login");
+              }
+            }
+          }
+        } else {
+          // API call failed - if we have admin in localStorage, allow access
+          if (currentRole !== "admin") {
             if (isMounted) {
               navigate("/login");
             }
-            return;
-          }
-        } else {
-          // API call failed, check if we have a valid role in localStorage
-          const currentRole = getRole();
-          if (currentRole === "admin") {
+          } else {
+            // We have admin role, allow access even if API fails
             if (isMounted) {
               setIsAuthorized(true);
               setIsChecking(false);
-            }
-          } else {
-            if (isMounted) {
-              navigate("/login");
             }
           }
         }
       } catch (e) {
         // If API fails but we have admin role in localStorage, allow access
         // (in case backend is temporarily down)
-        const currentRole = getRole();
         if (currentRole === "admin") {
           if (isMounted) {
             setIsAuthorized(true);
@@ -100,10 +109,22 @@ const Admin = () => {
       }
     })();
     
+    // Fallback timeout - if checking takes too long, allow access if we have admin role
+    timeoutId = setTimeout(() => {
+      if (isMounted && isChecking) {
+        const currentRole = getRole();
+        if (currentRole === "admin") {
+          setIsAuthorized(true);
+          setIsChecking(false);
+        }
+      }
+    }, 3000);
+    
     return () => {
       isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [navigate]); // Removed 'role' from dependencies to prevent infinite loops
+  }, [navigate, isChecking]); // Added isChecking to dependencies
 
   if (isChecking) {
     return (
@@ -113,10 +134,19 @@ const Admin = () => {
     );
   }
 
-  if (!isAuthorized || role !== "admin" || !getToken()) {
+  // Check authorization - use both state and direct check for reliability
+  const currentRole = getRole();
+  const hasToken = getToken();
+  // Allow access if either state says authorized OR localStorage has admin role
+  const isAdmin = isAuthorized || currentRole === "admin";
+  
+  if (!isAdmin || !hasToken) {
+    // Still show something instead of blank page
     return (
-      <div className="container px-4 py-16 text-center">
-        <p>Unauthorized. Redirecting to login...</p>
+      <div className="container px-4 py-16 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Access Denied</h1>
+        <p>You need admin privileges to access this page.</p>
+        <p className="text-sm text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
