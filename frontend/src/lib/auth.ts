@@ -44,7 +44,9 @@ export async function register(payload: { email: string; password: string; name?
     throw new Error("REGISTRATION_FAILED");
   }
   const data = await res.json();
-  setToken(data.token, data.role);
+  // Backend returns { token, user: { email, role } }
+  const role = data.user?.role || data.role || "user";
+  setToken(data.token, role);
   await syncAccountStateAfterAuth();
   return data;
 }
@@ -63,7 +65,9 @@ export async function login(payload: { email: string; password: string }) {
     throw new Error("LOGIN_FAILED");
   }
   const data = await res.json();
-  setToken(data.token, data.role);
+  // Backend returns { token, user: { email, role } }
+  const role = data.user?.role || data.role || "user";
+  setToken(data.token, role);
   await syncAccountStateAfterAuth();
   return data;
 }

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { authFetch, clearAuth, getRole, getToken } from "@/lib/auth";
+import { authFetch, clearAuth, getRole, getToken, getEmail } from "@/lib/auth";
 import type { Product } from "@/types/product";
 import { addToCart } from "@/lib/cart";
 
@@ -22,13 +22,26 @@ const Account = () => {
         const res = await authFetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
-          setProfile(data as Profile);
+          // Backend now returns data directly, not nested under 'user'
+          setProfile({
+            email: data.email || null,
+            name: data.name || null,
+            role: data.role || null
+          } as Profile);
         }
       } catch (e) {
-        // no-op
+        // If API fails, try to get email from token
+        const email = getEmail();
+        if (email) {
+          setProfile({
+            email: email,
+            name: null,
+            role: role || null
+          } as Profile);
+        }
       }
     })();
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     if (!getToken()) navigate("/login");
@@ -96,8 +109,8 @@ const Account = () => {
               <h2 className="font-serif text-2xl font-bold mb-4">Profile Details</h2>
               <div className="space-y-3">
                 <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">Full Name</span><span>{profile?.name || "- not added -"}</span></div>
-                <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">Email ID</span><span>{profile?.email || "- not added -"}</span></div>
-                <div className="flex justify-between py-2"><span className="text-muted-foreground">Role</span><span>{role || "guest"}</span></div>
+                <div className="flex justify-between py-2 border-b"><span className="text-muted-foreground">Email ID</span><span>{profile?.email || getEmail() || "- not added -"}</span></div>
+                <div className="flex justify-between py-2"><span className="text-muted-foreground">Role</span><span>{profile?.role || role || "guest"}</span></div>
               </div>
             </div>
           </TabsContent>
