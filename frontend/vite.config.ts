@@ -18,6 +18,25 @@ export default defineConfig(async ({ mode }) => {
   }
   return {
     base,
+    customLogger: {
+      info: (msg) => {
+        // Filter out proxy ECONNREFUSED errors
+        if (msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
+          return;
+        }
+        console.log(msg);
+      },
+      warn: (msg) => console.warn(msg),
+      error: (msg) => {
+        // Filter out proxy ECONNREFUSED errors
+        if (typeof msg === "string" && msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
+          return;
+        }
+        console.error(msg);
+      },
+      clearScreen: () => {},
+      hasErrorLogged: () => false,
+    },
     server: {
       host: "::",
       port: 8080,
@@ -32,9 +51,11 @@ export default defineConfig(async ({ mode }) => {
           configure: (proxy: any, _options: any) => {
             proxy.on("error", (err: any, _req: any, _res: any) => {
               // Suppress connection refused errors when backend is not running
-              if (err.code !== "ECONNREFUSED") {
-                console.error("Proxy error:", err);
+              if (err.code === "ECONNREFUSED") {
+                // Silently ignore - backend is not running
+                return;
               }
+              console.error("Proxy error:", err);
             });
           },
         },
@@ -45,9 +66,11 @@ export default defineConfig(async ({ mode }) => {
           timeout: 10000,
           configure: (proxy: any, _options: any) => {
             proxy.on("error", (err: any, _req: any, _res: any) => {
-              if (err.code !== "ECONNREFUSED") {
-                console.error("Proxy error:", err);
+              if (err.code === "ECONNREFUSED") {
+                // Silently ignore - backend is not running
+                return;
               }
+              console.error("Proxy error:", err);
             });
           },
         },
