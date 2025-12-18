@@ -19,15 +19,15 @@ export default defineConfig(async ({ mode }) => {
   return {
     base,
     customLogger: {
-      info: (msg) => {
+      info: (msg: any) => {
         // Filter out proxy ECONNREFUSED errors
-        if (msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
+        if (typeof msg === "string" && msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
           return;
         }
         console.log(msg);
       },
-      warn: (msg) => console.warn(msg),
-      error: (msg) => {
+      warn: (msg: any) => console.warn(msg),
+      error: (msg: any) => {
         // Filter out proxy ECONNREFUSED errors
         if (typeof msg === "string" && msg.includes("http proxy error") && msg.includes("ECONNREFUSED")) {
           return;
