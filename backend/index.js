@@ -26,6 +26,7 @@ import registerCategoryTiles from "./routes/categoryTiles.js";
 import registerCarousel from "./routes/carousel.js";
 import registerPages from "./routes/pages.js";
 import registerSettings from "./routes/settings.js";
+import registerPayments from "./routes/payments.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -489,6 +490,10 @@ initDb().finally(() => {
       getSettings: () => settings,
       setSettings: (obj) => { settings = obj; },
       saveSettings: saveSettingsToFile,
+    });
+    registerPayments({
+      app,
+      authMiddleware,
     });
     app.listen(port, () => {
       console.log(`[backend] listening on http://localhost:${port}`);

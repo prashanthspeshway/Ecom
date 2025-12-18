@@ -6,11 +6,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, getToken } from "@/lib/auth";
+import { toast } from "@/components/ui/sonner";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<{ product: { id: string; name: string; images: string[]; price: number }; quantity: number }[]>([]);
-  const [pmethod, setPmethod] = useState("cod");
+  const [pmethod, setPmethod] = useState("razorpay");
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [coupon, setCoupon] = useState("");
   const [addr, setAddr] = useState({ first: "", last: "", email: "", phone: "", address: "", city: "", state: "", pincode: "" });
   useEffect(() => {
@@ -84,23 +86,14 @@ const Checkout = () => {
             <h2 className="font-serif text-2xl font-bold mb-6">Payment Method</h2>
             <RadioGroup value={pmethod} onValueChange={setPmethod}>
               <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                <RadioGroupItem value="card" id="card" />
-                <Label htmlFor="card" className="flex-1 cursor-pointer">Credit/Debit Card</Label>
+                <RadioGroupItem value="razorpay" id="razorpay" />
+                <Label htmlFor="razorpay" className="flex-1 cursor-pointer">Razorpay (Cards, UPI, Wallets, Net Banking)</Label>
               </div>
-              {pmethod === "card" && (
-                <div className="grid sm:grid-cols-3 gap-3 mt-3">
-                  <Input placeholder="Card Number" />
-                  <Input placeholder="MM/YY" />
-                  <Input placeholder="CVV" />
-                </div>
-              )}
-              <div className="flex items-center space-x-2 p-4 border rounded-lg mt-4">
-                <RadioGroupItem value="upi" id="upi" />
-                <Label htmlFor="upi" className="flex-1 cursor-pointer">UPI</Label>
-              </div>
-              {pmethod === "upi" && (
-                <div className="mt-3">
-                  <Input placeholder="yourid@upi" />
+              {pmethod === "razorpay" && (
+                <div className="mt-3 p-3 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    You will be redirected to Razorpay's secure payment gateway to complete your payment.
+                  </p>
                 </div>
               )}
               <div className="flex items-center space-x-2 p-4 border rounded-lg mt-4">
@@ -137,16 +130,147 @@ const Checkout = () => {
               <Separator />
               <div className="flex justify-between text-lg"><span className="font-semibold">Total</span><span className="font-bold">₹{total}</span></div>
             </div>
-            <Button size="lg" className="w-full" disabled={!canPlace} onClick={async () => {
-              const res = await authFetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address: addr, payment: pmethod }) });
-              if (res.ok) {
-                const o = await authFetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-                if (o.ok) {
-                  try { await authFetch("/api/cart?all=1", { method: "DELETE" }); } catch { void 0; }
+            <Button size="lg" className="w-full" disabled={!canPlace || (pmethod === "razorpay" && !razorpayLoaded)} onClick={async () => {
+              if (pmethod === "razorpay") {
+                // Handle Razorpay payment
+                try {
+                  // Create Razorpay order
+                  const orderRes = await authFetch("/api/payments/create-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      amount: total,
+                      currency: "INR",
+                      receipt: `receipt_${Date.now()}`,
+                    }),
+                  });
+
+                  if (!orderRes.ok) {
+                    const errorData = await orderRes.json();
+                    toast.error(errorData.error || "Failed to create payment order");
+                    return;
+                  }
+
+                  const orderData = await orderRes.json();
+
+                  // Save checkout data first
+                  await authFetch("/api/checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ address: addr, payment: pmethod }),
+                  });
+
+                  // Get Razorpay key from backend (for security, key should come from backend)
+                  // For now, we'll fetch it from env. In production, get it from backend API
+                  const razorpayKeyRes = await authFetch("/api/payments/get-key");
+                  let razorpayKey = "";
+                  if (razorpayKeyRes.ok) {
+                    const keyData = await razorpayKeyRes.json();
+                    razorpayKey = keyData.key_id;
+                  } else {
+                    razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "";
+                  }
+
+                  if (!razorpayKey) {
+                    toast.error("Razorpay key not configured");
+                    return;
+                  }
+
+                  // Initialize Razorpay checkout
+                  const options = {
+                    key: razorpayKey,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "Saree Elegance",
+                    description: "Order Payment",
+                    order_id: orderData.id,
+                    handler: async function (response: any) {
+                      // Verify payment
+                      const verifyRes = await authFetch(`${apiBase}/api/payments/verify-payment`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          razorpay_order_id: response.razorpay_order_id,
+                          razorpay_payment_id: response.razorpay_payment_id,
+                          razorpay_signature: response.razorpay_signature,
+                        }),
+                      });
+
+                      if (verifyRes.ok) {
+                        const verifyData = await verifyRes.json();
+                        if (verifyData.success) {
+                          // Create order
+                          const o = await authFetch("/api/orders", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              payment_id: verifyData.payment_id,
+                              payment_method: "razorpay",
+                            }),
+                          });
+                          if (o.ok) {
+                            try {
+                              await authFetch("/api/cart?all=1", { method: "DELETE" });
+                            } catch {
+                              void 0;
+                            }
+                            toast.success("Payment successful! Order placed.");
+                            navigate("/account");
+                          }
+                        } else {
+                          toast.error("Payment verification failed");
+                        }
+                      } else {
+                        toast.error("Payment verification failed");
+                      }
+                    },
+                    prefill: {
+                      name: `${addr.first} ${addr.last}`,
+                      email: addr.email,
+                      contact: addr.phone,
+                    },
+                    theme: {
+                      color: "#000000",
+                    },
+                    modal: {
+                      ondismiss: function () {
+                        toast.error("Payment cancelled");
+                      },
+                    },
+                  };
+
+                  const razorpay = new (window as any).Razorpay(options);
+                  razorpay.open();
+                } catch (e) {
+                  console.error("Razorpay error:", e);
+                  toast.error("Failed to process payment");
                 }
-                navigate("/account");
+              } else {
+                // Cash on Delivery
+                const res = await authFetch("/api/checkout", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ address: addr, payment: pmethod }),
+                });
+                if (res.ok) {
+                  const o = await authFetch("/api/orders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                  });
+                  if (o.ok) {
+                    try {
+                      await authFetch("/api/cart?all=1", { method: "DELETE" });
+                    } catch {
+                      void 0;
+                    }
+                    navigate("/account");
+                  }
+                }
               }
-            }}>Place Order</Button>
+            }}>
+              {pmethod === "razorpay" ? "Pay with Razorpay" : "Place Order"}
+            </Button>
             <p className="text-xs text-muted-foreground text-center mt-4">By placing your order, you agree to our Terms & Conditions</p>
           </div>
         </div>

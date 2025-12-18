@@ -46,6 +46,10 @@ Located in: `backend/.env`
 - `SMTP_FROM` - From email address (optional, defaults to SMTP_USER)
 - `FRONTEND_URL` - Frontend URL for reset links (default: `http://localhost:8080`)
 
+### Razorpay Configuration (for Payment Gateway):
+- `RAZORPAY_KEY_ID` - Your Razorpay Key ID (from Razorpay Dashboard)
+- `RAZORPAY_KEY_SECRET` - Your Razorpay Key Secret (from Razorpay Dashboard)
+
 ### Example:
 ```env
 PORT=3001
@@ -67,9 +71,15 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 SMTP_FROM=your-email@gmail.com
 FRONTEND_URL=http://localhost:8080
+
+# Razorpay Configuration
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 ```
 
 **Note for Gmail users**: You need to use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password. Enable 2-Step Verification first, then generate an app password.
+
+**Note for Razorpay**: Get your Key ID and Key Secret from [Razorpay Dashboard](https://dashboard.razorpay.com/app/keys). Use test keys for development and live keys for production.
 
 ## Setup Instructions
 
