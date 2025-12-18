@@ -16,64 +16,23 @@ const AdminProducts = () => {
   const qc = useQueryClient();
   const [role, setRole] = useState<string | null>(getRole());
   const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const token = getToken();
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-      
-      // Verify role from backend
-      try {
-        const res = await authFetch("/api/auth/me");
-        if (res.ok) {
-          const data = await res.json();
-          const backendRole = data.role || data.user?.role || null;
-          if (backendRole && backendRole !== "undefined") {
-            if (backendRole !== role) {
-              localStorage.setItem("auth_role", backendRole);
-              setRole(backendRole);
-            }
-            if (backendRole !== "admin") {
-              navigate("/login");
-              return;
-            }
-          } else {
-            navigate("/login");
-            return;
-          }
-        } else {
-          if (role !== "admin") {
-            navigate("/login");
-            return;
-          }
-        }
-      } catch (e) {
-        if (role !== "admin") {
-          navigate("/login");
-          return;
-        }
-      }
-      setIsChecking(false);
-    })();
-  }, [navigate, role]);
-
-  if (isChecking) {
-    return (
-      <div className="container px-4 py-16 text-center">
-        <p>Verifying admin access...</p>
-      </div>
-    );
-  }
-
-  if (role !== "admin" || !getToken()) {
-    return null;
-  }
-
+  // All hooks must be called before any conditional returns
   const searchParam = new URLSearchParams(location.search).get("query") || "";
   const [searchTerm, setSearchTerm] = useState(searchParam);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSub, setSelectedSub] = useState<string | null>(null);
+  const [localSearch, setLocalSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<{ price: string; stock: string; discount: string }>({ price: "", stock: "", discount: "" });
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [selectedLeninSub, setSelectedLeninSub] = useState<string>("");
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [editOriginalPrice, setEditOriginalPrice] = useState<string>("");
+  const [editSaveAmount, setEditSaveAmount] = useState<string>("");
+  const [manageCategory] = useState<string>("Lenin");
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["admin-products"],
@@ -83,9 +42,181 @@ const AdminProducts = () => {
     },
   });
 
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSub, setSelectedSub] = useState<string | null>(null);
-  const [localSearch, setLocalSearch] = useState("");
+  const { data: categoriesData = [] } = useQuery<string[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/categories`);
+      return res.json();
+    },
+  });
+
+  const { data: manageSubcats = [] } = useQuery<string[]>({
+    queryKey: ["subcategories", manageCategory],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(manageCategory)}`);
+      return res.json();
+    },
+  });
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const base = !q
+      ? products
+      : products.filter((p) => [p.name, p.brand, p.category].some((v) => (v || "").toLowerCase().includes(q)));
+    const cat = selectedCategory?.toLowerCase();
+    const afterCat = cat
+      ? base.filter((p) => (p.category || "").toLowerCase().includes(cat))
+      : base;
+    const afterSub = cat === "lenin" && selectedSub
+      ? afterCat.filter((p) => (p.category || "").toLowerCase() === selectedSub.toLowerCase())
+      : afterCat;
+    const loc = localSearch.trim().toLowerCase();
+    return loc && cat
+      ? afterSub.filter((p) => (p.name || "").toLowerCase().includes(loc))
+      : afterSub;
+  }, [products, searchTerm, selectedCategory, selectedSub, localSearch]);
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: Partial<Product> }) => {
+      const res = await authFetch(`/api/products/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Update failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.refetchQueries({ queryKey: ["admin-products"] });
+      qc.refetchQueries({ queryKey: ["products"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await authFetch(`/api/products/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.refetchQueries({ queryKey: ["admin-products"] });
+      qc.refetchQueries({ queryKey: ["products"] });
+    },
+  });
+
+  const catCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (categoriesData || []).forEach((c) => {
+      const lc = c.toLowerCase();
+      counts[c] = (products || []).filter((p) => (p.category || "").toLowerCase().includes(lc)).length;
+    });
+    return counts;
+  }, [products, categoriesData]);
+
+  const subCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (manageSubcats || []).forEach((s) => {
+      const lc = s.toLowerCase();
+      counts[s] = (products || []).filter((p) => (p.category || "").toLowerCase() === lc).length;
+    });
+    const leninAll = (products || []).filter((p) => {
+      const lc = (p.category || "").toLowerCase();
+      if (lc.includes("lenin")) return true;
+      return (manageSubcats || []).some((s) => lc === s.toLowerCase());
+    }).length;
+    counts["__ALL_LENIN__"] = leninAll;
+    return counts;
+  }, [products, manageSubcats]);
+
+  useEffect(() => {
+    if ((selectedCategory || "").toLowerCase() !== "lenin") setSelectedSub(null);
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = getToken();
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+      
+      // Check localStorage first - if admin, allow immediately
+      const currentRole = getRole();
+      if (currentRole === "admin") {
+        setIsAuthorized(true);
+        setIsChecking(false);
+      }
+      
+      // Verify with backend in background
+      try {
+        const res = await authFetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          const backendRole = data.role || data.user?.role || null;
+          if (backendRole && backendRole !== "undefined") {
+            localStorage.setItem("auth_role", backendRole);
+            setRole(backendRole);
+            if (backendRole === "admin") {
+              setIsAuthorized(true);
+            } else {
+              navigate("/login");
+            }
+          }
+        }
+        setIsChecking(false);
+      } catch (e) {
+        // If API fails but we have admin in localStorage, allow access
+        if (currentRole === "admin") {
+          setIsAuthorized(true);
+        }
+        setIsChecking(false);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
+
+  // Check authorization
+  const currentRole = getRole();
+  const hasToken = getToken();
+  const isAdmin = currentRole === "admin" || isAuthorized;
+  
+  // Show loading while checking (only if we don't have admin role)
+  if (isChecking && !isAdmin) {
+    return (
+      <div className="container px-4 py-16 text-center">
+        <p>Verifying admin access...</p>
+      </div>
+    );
+  }
+  
+  if (!hasToken) {
+    return (
+      <div className="container px-4 py-16 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Not Authenticated</h1>
+        <p>Please log in to access the admin panel.</p>
+        <Button onClick={() => navigate("/login")}>Go to Login</Button>
+      </div>
+    );
+  }
+  
+  if (!isAdmin) {
+    return (
+      <div className="container px-4 py-16 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Access Denied</h1>
+        <p>You need admin privileges to access this page.</p>
+        <p className="text-sm text-muted-foreground">Current role: {currentRole || "none"}</p>
+        <Button onClick={() => navigate("/account")}>Go to Account</Button>
+      </div>
+    );
+  }
+  
+  // If we get here, user is authorized - render admin products
+
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -152,15 +283,6 @@ const AdminProducts = () => {
     });
     return counts;
   }, [products, categoriesData]);
-
-  const [manageCategory] = useState<string>("Lenin");
-  const { data: manageSubcats = [] } = useQuery<string[]>({
-    queryKey: ["subcategories", manageCategory],
-    queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(manageCategory)}`);
-      return res.json();
-    },
-  });
   const subCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     (manageSubcats || []).forEach((s) => {
@@ -178,16 +300,6 @@ const AdminProducts = () => {
   useEffect(() => {
     if ((selectedCategory || "").toLowerCase() !== "lenin") setSelectedSub(null);
   }, [selectedCategory]);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [edit, setEdit] = useState<{ price: string; stock: string; discount: string }>({ price: "", stock: "", discount: "" });
-  const [editName, setEditName] = useState("");
-  
-  const [editCategory, setEditCategory] = useState("");
-  const [selectedLeninSub, setSelectedLeninSub] = useState<string>("");
-  const [editImages, setEditImages] = useState<string[]>([]);
-  const [editOriginalPrice, setEditOriginalPrice] = useState<string>("");
-  const [editSaveAmount, setEditSaveAmount] = useState<string>("");
 
   return (
     <div className="container px-4 py-8">
