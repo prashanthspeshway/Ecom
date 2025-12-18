@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { authFetch, getRole, getToken } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
+import { X, Plus } from "lucide-react";
 
 const AdminSettings = () => {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [role, setRole] = useState<string | null>(getRole());
   const [isChecking, setIsChecking] = useState(true);
   const [settings, setSettings] = useState({
@@ -16,8 +19,10 @@ const AdminSettings = () => {
     logoUrl: "",
     faviconUrl: "",
     description: "",
-    contactEmail: "",
-    contactPhone: "",
+    socialLinks: [
+      { name: "Instagram", url: "" },
+      { name: "Facebook", url: "" },
+    ],
   });
   const [loading, setLoading] = useState(false);
 
@@ -77,6 +82,13 @@ const AdminSettings = () => {
       const res = await authFetch("/api/settings");
       if (res.ok) {
         const data = await res.json();
+        // Ensure socialLinks exists and has at least Instagram and Facebook
+        if (!data.socialLinks || !Array.isArray(data.socialLinks)) {
+          data.socialLinks = [
+            { name: "Instagram", url: data.instagramUrl || "" },
+            { name: "Facebook", url: data.facebookUrl || "" },
+          ];
+        }
         setSettings(data);
       }
     } catch (e) {
@@ -89,13 +101,20 @@ const AdminSettings = () => {
   const saveSettings = async () => {
     try {
       setLoading(true);
+      // Filter out empty social links before saving
+      const cleanedSettings = {
+        ...settings,
+        socialLinks: (settings.socialLinks || []).filter(link => link.name && link.url),
+      };
       const res = await authFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(cleanedSettings),
       });
       if (res.ok) {
         toast.success("Settings saved successfully");
+        // Invalidate settings query to refresh footer
+        qc.invalidateQueries({ queryKey: ["settings"] });
       } else {
         toast.error("Failed to save settings");
       }
@@ -183,27 +202,64 @@ const AdminSettings = () => {
           </div>
 
           <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
+            <h2 className="text-xl font-semibold mb-4">Social Media Links</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Manage social media links that appear in the footer. These will be displayed in the "Follow Us" section.
+            </p>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="contact-email">Contact Email</Label>
-                <Input
-                  id="contact-email"
-                  type="email"
-                  value={settings.contactEmail}
-                  onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
-                  placeholder="contact@example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="contact-phone">Contact Phone</Label>
-                <Input
-                  id="contact-phone"
-                  value={settings.contactPhone}
-                  onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
+              {settings.socialLinks?.map((link, index) => (
+                <div key={index} className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor={`social-name-${index}`}>Platform Name</Label>
+                    <Input
+                      id={`social-name-${index}`}
+                      value={link.name}
+                      onChange={(e) => {
+                        const newLinks = [...(settings.socialLinks || [])];
+                        newLinks[index] = { ...newLinks[index], name: e.target.value };
+                        setSettings({ ...settings, socialLinks: newLinks });
+                      }}
+                      placeholder="Instagram"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor={`social-url-${index}`}>URL</Label>
+                    <Input
+                      id={`social-url-${index}`}
+                      type="url"
+                      value={link.url}
+                      onChange={(e) => {
+                        const newLinks = [...(settings.socialLinks || [])];
+                        newLinks[index] = { ...newLinks[index], url: e.target.value };
+                        setSettings({ ...settings, socialLinks: newLinks });
+                      }}
+                      placeholder="https://instagram.com/yourprofile"
+                    />
+                  </div>
+                  {settings.socialLinks && settings.socialLinks.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const newLinks = settings.socialLinks.filter((_, i) => i !== index);
+                        setSettings({ ...settings, socialLinks: newLinks });
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const newLinks = [...(settings.socialLinks || []), { name: "", url: "" }];
+                  setSettings({ ...settings, socialLinks: newLinks });
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Social Link
+              </Button>
             </div>
           </div>
 

@@ -300,9 +300,25 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
             <div>
               <h4 className="font-semibold mb-4">Follow Us</h4>
-              <div className="flex gap-4">
-                <a href="#" className="text-muted-foreground hover:text-foreground">Instagram</a>
-                <a href="#" className="text-muted-foreground hover:text-foreground">Facebook</a>
+              <div className="flex flex-col gap-2">
+                {settings?.socialLinks && Array.isArray(settings.socialLinks) && settings.socialLinks.length > 0 ? (
+                  settings.socialLinks.map((link, index) => (
+                    <a
+                      key={index}
+                      href={link.url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {link.name}
+                    </a>
+                  ))
+                ) : (
+                  <>
+                    <a href="#" className="text-muted-foreground hover:text-foreground">Instagram</a>
+                    <a href="#" className="text-muted-foreground hover:text-foreground">Facebook</a>
+                  </>
+                )}
               </div>
             </div>
           </div>

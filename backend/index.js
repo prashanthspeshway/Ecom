@@ -24,6 +24,7 @@ import registerWishlist from "./routes/wishlist.js";
 import registerCategoryTiles from "./routes/categoryTiles.js";
 import registerCarousel from "./routes/carousel.js";
 import registerPages from "./routes/pages.js";
+import registerSettings from "./routes/settings.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,6 +71,8 @@ const carouselPath = path.join(__dirname, "data", "carousel.json");
 let carousel = [];
 const pagesPath = path.join(__dirname, "data", "pages.json");
 let pages = [];
+const settingsPath = path.join(__dirname, "data", "settings.json");
+let settings = {};
 
 function loadData() {
   try {
@@ -170,6 +173,14 @@ function loadData() {
     try { fs.mkdirSync(path.dirname(pagesPath), { recursive: true }); } catch {}
     try { fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2)); } catch {}
   }
+  try {
+    const raw = fs.readFileSync(settingsPath, "utf-8");
+    settings = JSON.parse(raw);
+  } catch (e) {
+    settings = {};
+    try { fs.mkdirSync(path.dirname(settingsPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2)); } catch {}
+  }
 }
 
 loadData();
@@ -212,6 +223,10 @@ async function initDb() {
       const pagesColl = db.collection("pages");
       if (await pagesColl.countDocuments() === 0 && Array.isArray(pages) && pages.length) {
         await pagesColl.insertMany(pages);
+      }
+      const settingsColl = db.collection("settings");
+      if (await settingsColl.countDocuments() === 0 && settings && typeof settings === "object" && Object.keys(settings).length) {
+        await settingsColl.insertOne(settings);
       }
       const ordColl = db.collection("orders");
       if (await ordColl.countDocuments() === 0 && orders && typeof orders === "object") {
@@ -440,6 +455,15 @@ initDb().finally(() => {
       getPages: () => pages,
       setPages: (arr) => { pages = arr; },
       savePages: savePagesToFile,
+    });
+    registerSettings({
+      app,
+      getDb: () => db,
+      authMiddleware,
+      adminOnly,
+      getSettings: () => settings,
+      setSettings: (obj) => { settings = obj; },
+      saveSettings: saveSettingsToFile,
     });
     app.listen(port, () => {
       console.log(`[backend] listening on http://localhost:${port}`);
