@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { authFetch, getRole } from "@/lib/auth";
+import { authFetch, getRole, getToken } from "@/lib/auth";
 
 type Progress = { placed?: number; dispatched?: number; in_transit?: number; shipped?: number; out_for_delivery?: number; delivered?: number };
 type OrderItem = { productId: string; quantity: number; price?: number; name?: string; image?: string; progress?: Progress };
@@ -16,56 +16,68 @@ const AdminOrders = () => {
   const qc = useQueryClient();
   const [role, setRole] = useState<string | null>(getRole());
   const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const navigate = useNavigate();
   
   useEffect(() => {
-    (async () => {
+    const checkAuth = async () => {
       const token = getToken();
       if (!token) {
         navigate("/login");
         return;
       }
       
-      // Verify role from backend
+      // Check localStorage first - if admin, allow immediately
+      const currentRole = getRole();
+      if (currentRole === "admin") {
+        setIsAuthorized(true);
+        setIsChecking(false);
+      }
+      
+      // Verify with backend in background
       try {
         const res = await authFetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
           const backendRole = data.role || data.user?.role || null;
           if (backendRole && backendRole !== "undefined") {
-            if (backendRole !== role) {
-              localStorage.setItem("auth_role", backendRole);
-              setRole(backendRole);
-            }
-            if (backendRole !== "admin") {
+            localStorage.setItem("auth_role", backendRole);
+            setRole(backendRole);
+            if (backendRole === "admin") {
+              setIsAuthorized(true);
+            } else {
               navigate("/login");
-              return;
             }
-          } else {
-            navigate("/login");
-            return;
-          }
-        } else {
-          if (role !== "admin") {
-            navigate("/login");
-            return;
           }
         }
+        setIsChecking(false);
+        try {
+          localStorage.setItem("admin_last_seen_orders_ts", String(Date.now()));
+          window.dispatchEvent(new Event("orders:update"));
+        } catch (e) { void e; }
       } catch (e) {
-        if (role !== "admin") {
-          navigate("/login");
-          return;
+        // If API fails but we have admin in localStorage, allow access
+        if (currentRole === "admin") {
+          setIsAuthorized(true);
         }
+        setIsChecking(false);
+        try {
+          localStorage.setItem("admin_last_seen_orders_ts", String(Date.now()));
+          window.dispatchEvent(new Event("orders:update"));
+        } catch (e) { void e; }
       }
-      setIsChecking(false);
-      try {
-        localStorage.setItem("admin_last_seen_orders_ts", String(Date.now()));
-        window.dispatchEvent(new Event("orders:update"));
-      } catch (e) { void e; }
-    })();
-  }, [navigate, role]);
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
-  if (isChecking) {
+  // Check authorization
+  const currentRole = getRole();
+  const hasToken = getToken();
+  const isAdmin = currentRole === "admin" || isAuthorized;
+  
+  // Show loading while checking (only if we don't have admin role)
+  if (isChecking && !isAdmin) {
     return (
       <div className="container px-4 py-16 text-center">
         <p>Verifying admin access...</p>
@@ -73,8 +85,22 @@ const AdminOrders = () => {
     );
   }
 
-  if (role !== "admin" || !getToken()) {
-    return null;
+  if (!hasToken) {
+    return (
+      <div className="container px-4 py-16 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Not Authenticated</h1>
+        <p>Please log in to access orders.</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="container px-4 py-16 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Access Denied</h1>
+        <p>You need admin privileges to access this page.</p>
+      </div>
+    );
   }
   const { data: orders = [], error, isLoading } = useQuery<Order[]>({
     queryKey: ["admin-orders"],
