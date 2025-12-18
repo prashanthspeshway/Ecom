@@ -7,18 +7,70 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product } from "@/types/product";
-import { authFetch, getRole, apiBase } from "@/lib/auth";
+import { authFetch, getRole, getToken, apiBase } from "@/lib/auth";
 import { Plus, Trash2 } from "lucide-react";
 
 const AdminProducts = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const qc = useQueryClient();
-  const role = getRole();
+  const [role, setRole] = useState<string | null>(getRole());
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (role !== "admin") navigate("/login");
-  }, [role, navigate]);
+    (async () => {
+      const token = getToken();
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+      
+      // Verify role from backend
+      try {
+        const res = await authFetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          const backendRole = data.role || data.user?.role || null;
+          if (backendRole && backendRole !== "undefined") {
+            if (backendRole !== role) {
+              localStorage.setItem("auth_role", backendRole);
+              setRole(backendRole);
+            }
+            if (backendRole !== "admin") {
+              navigate("/login");
+              return;
+            }
+          } else {
+            navigate("/login");
+            return;
+          }
+        } else {
+          if (role !== "admin") {
+            navigate("/login");
+            return;
+          }
+        }
+      } catch (e) {
+        if (role !== "admin") {
+          navigate("/login");
+          return;
+        }
+      }
+      setIsChecking(false);
+    })();
+  }, [navigate, role]);
+
+  if (isChecking) {
+    return (
+      <div className="container px-4 py-16 text-center">
+        <p>Verifying admin access...</p>
+      </div>
+    );
+  }
+
+  if (role !== "admin" || !getToken()) {
+    return null;
+  }
 
   const searchParam = new URLSearchParams(location.search).get("query") || "";
   const [searchTerm, setSearchTerm] = useState(searchParam);

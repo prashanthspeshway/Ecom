@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,13 +14,68 @@ type Order = { id: string; user: string; items: OrderItem[]; status: string; cre
 
 const AdminOrders = () => {
   const qc = useQueryClient();
-  const role = getRole();
+  const [role, setRole] = useState<string | null>(getRole());
+  const [isChecking, setIsChecking] = useState(true);
+  const navigate = useNavigate();
+  
   useEffect(() => {
-    try {
-      localStorage.setItem("admin_last_seen_orders_ts", String(Date.now()));
-      window.dispatchEvent(new Event("orders:update"));
-    } catch (e) { void e; }
-  }, []);
+    (async () => {
+      const token = getToken();
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+      
+      // Verify role from backend
+      try {
+        const res = await authFetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          const backendRole = data.role || data.user?.role || null;
+          if (backendRole && backendRole !== "undefined") {
+            if (backendRole !== role) {
+              localStorage.setItem("auth_role", backendRole);
+              setRole(backendRole);
+            }
+            if (backendRole !== "admin") {
+              navigate("/login");
+              return;
+            }
+          } else {
+            navigate("/login");
+            return;
+          }
+        } else {
+          if (role !== "admin") {
+            navigate("/login");
+            return;
+          }
+        }
+      } catch (e) {
+        if (role !== "admin") {
+          navigate("/login");
+          return;
+        }
+      }
+      setIsChecking(false);
+      try {
+        localStorage.setItem("admin_last_seen_orders_ts", String(Date.now()));
+        window.dispatchEvent(new Event("orders:update"));
+      } catch (e) { void e; }
+    })();
+  }, [navigate, role]);
+
+  if (isChecking) {
+    return (
+      <div className="container px-4 py-16 text-center">
+        <p>Verifying admin access...</p>
+      </div>
+    );
+  }
+
+  if (role !== "admin" || !getToken()) {
+    return null;
+  }
   const { data: orders = [], error, isLoading } = useQuery<Order[]>({
     queryKey: ["admin-orders"],
     queryFn: async () => {

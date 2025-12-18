@@ -8,7 +8,33 @@ export function getToken(): string | null {
 }
 
 export function getRole(): string | null {
-  return localStorage.getItem("auth_role");
+  const role = localStorage.getItem("auth_role");
+  // Prevent "undefined" string from being returned
+  if (role === "undefined" || role === "null") {
+    return null;
+  }
+  return role;
+}
+
+// Function to sync role from backend - call this if role seems incorrect
+export async function syncRoleFromBackend(): Promise<string | null> {
+  try {
+    const token = getToken();
+    if (!token) return null;
+    
+    const res = await authFetch("/api/auth/me");
+    if (res.ok) {
+      const data = await res.json();
+      const role = data.role || data.user?.role || null;
+      if (role && role !== "undefined") {
+        localStorage.setItem("auth_role", role);
+        return role;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to sync role from backend:", e);
+  }
+  return getRole();
 }
 
 export function clearAuth() {
@@ -46,8 +72,24 @@ export async function register(payload: { email: string; password: string; name?
   const data = await res.json();
   // Backend returns { token, user: { email, role } }
   const role = data.user?.role || data.role || "user";
+  // CRITICAL: Always set the role from the backend response
+  if (!role || role === "undefined") {
+    console.error("Invalid role received from register:", data);
+    throw new Error("REGISTRATION_FAILED");
+  }
   setToken(data.token, role);
+  // Verify role was set correctly
+  const storedRole = getRole();
+  if (storedRole !== role) {
+    console.error("Role mismatch after setting:", { expected: role, got: storedRole });
+    localStorage.setItem("auth_role", role);
+  }
   await syncAccountStateAfterAuth();
+  // Double-check role after sync
+  const finalRole = getRole();
+  if (finalRole !== role) {
+    localStorage.setItem("auth_role", role);
+  }
   return data;
 }
 
@@ -67,8 +109,25 @@ export async function login(payload: { email: string; password: string }) {
   const data = await res.json();
   // Backend returns { token, user: { email, role } }
   const role = data.user?.role || data.role || "user";
+  // CRITICAL: Always set the role from the backend response
+  if (!role || role === "undefined") {
+    console.error("Invalid role received from login:", data);
+    throw new Error("LOGIN_FAILED");
+  }
   setToken(data.token, role);
+  // Verify role was set correctly
+  const storedRole = getRole();
+  if (storedRole !== role) {
+    console.error("Role mismatch after setting:", { expected: role, got: storedRole });
+    // Force set it again
+    localStorage.setItem("auth_role", role);
+  }
   await syncAccountStateAfterAuth();
+  // Double-check role after sync
+  const finalRole = getRole();
+  if (finalRole !== role) {
+    localStorage.setItem("auth_role", role);
+  }
   return data;
 }
 

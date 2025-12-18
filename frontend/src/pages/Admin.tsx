@@ -6,7 +6,7 @@ import ProductCard from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { authFetch, getRole, getToken, apiBase } from "@/lib/auth";
+import { authFetch, getRole, getToken, apiBase, syncRoleFromBackend } from "@/lib/auth";
  
 import type { Product } from "@/types/product";
 import { ImagePlus, FileUp } from "lucide-react";
@@ -19,11 +19,68 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const Admin = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const role = getRole();
+  const [role, setRole] = useState<string | null>(getRole());
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (role !== "admin" || !getToken()) navigate("/login");
-  }, [role, navigate]);
+    (async () => {
+      const token = getToken();
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+      
+      // Verify role from backend to ensure it's correct
+      try {
+        const res = await authFetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          const backendRole = data.role || data.user?.role || null;
+          if (backendRole && backendRole !== "undefined") {
+            // Update localStorage if different
+            if (backendRole !== role) {
+              localStorage.setItem("auth_role", backendRole);
+              setRole(backendRole);
+            }
+            if (backendRole !== "admin") {
+              navigate("/login");
+              return;
+            }
+          } else {
+            // Role not found in backend, redirect to login
+            navigate("/login");
+            return;
+          }
+        } else {
+          // API call failed, check if we have a valid role in localStorage
+          if (role !== "admin") {
+            navigate("/login");
+            return;
+          }
+        }
+      } catch (e) {
+        // If API fails but we have admin role in localStorage, allow access
+        // (in case backend is temporarily down)
+        if (role !== "admin") {
+          navigate("/login");
+          return;
+        }
+      }
+      setIsChecking(false);
+    })();
+  }, [navigate, role]);
+
+  if (isChecking) {
+    return (
+      <div className="container px-4 py-16 text-center">
+        <p>Verifying admin access...</p>
+      </div>
+    );
+  }
+
+  if (role !== "admin" || !getToken()) {
+    return null; // Will redirect in useEffect
+  }
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["admin-products"],

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login, getRole } from "@/lib/auth";
+import { login, getRole, syncRoleFromBackend } from "@/lib/auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -31,7 +31,14 @@ const Login = () => {
             onClick={async () => {
               try {
                 await login({ email, password });
-                const role = getRole();
+                // Wait a moment for localStorage to be updated
+                await new Promise(resolve => setTimeout(resolve, 100));
+                // Get role and verify it's set correctly
+                let role = getRole();
+                // If role is still not set, try syncing from backend
+                if (!role || role === "undefined") {
+                  role = await syncRoleFromBackend();
+                }
                 const params = new URLSearchParams(location.search);
                 const redirect = params.get("redirect");
                 if (redirect) navigate(redirect);
@@ -67,7 +74,14 @@ const Login = () => {
             onClick={async () => {
               try {
                 await login({ email, password });
-                const role = getRole();
+                // Wait a moment for localStorage to be updated
+                await new Promise(resolve => setTimeout(resolve, 100));
+                // Get role and verify it's set correctly
+                let role = getRole();
+                // If role is still not set, try syncing from backend
+                if (!role || role === "undefined") {
+                  role = await syncRoleFromBackend();
+                }
                 const params = new URLSearchParams(location.search);
                 const redirect = params.get("redirect");
                 if (redirect) navigate(redirect);
