@@ -96,7 +96,8 @@ export async function register(payload: { email: string; password: string; name?
 }
 
 export async function login(payload: { email: string; password: string }) {
-  const res = await fetch("/api/auth/login", {
+  const apiUrl = apiBase ? `${apiBase}/api/auth/login` : "/api/auth/login";
+  const res = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
