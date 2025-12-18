@@ -57,7 +57,8 @@ const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 export { apiBase };
 
 export async function register(payload: { email: string; password: string; name?: string; invite?: string }) {
-  const res = await fetch("/api/auth/register", {
+  const apiUrl = apiBase ? `${apiBase}/api/auth/register` : "/api/auth/register";
+  const res = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -135,7 +136,14 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   const token = getToken();
   const headers = new Headers(init.headers || {});
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  return fetch(input, { ...init, headers });
+  
+  // Handle relative URLs with apiBase
+  let url = input;
+  if (typeof input === "string" && input.startsWith("/") && apiBase) {
+    url = `${apiBase}${input}`;
+  }
+  
+  return fetch(url, { ...init, headers });
 }
 
 import { syncCartFromServer } from "@/lib/cart";

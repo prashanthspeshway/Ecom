@@ -44,6 +44,18 @@ export default function register({ app, authMiddleware }) {
     }
   });
 
+  // Get Razorpay public key (for frontend)
+  router.get("/get-key", authMiddleware, (req, res) => {
+    try {
+      if (!process.env.RAZORPAY_KEY_ID) {
+        return res.status(500).json({ error: "Razorpay not configured" });
+      }
+      res.json({ key_id: process.env.RAZORPAY_KEY_ID });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to get Razorpay key" });
+    }
+  });
+
   // Verify Razorpay payment
   router.post("/verify-payment", authMiddleware, async (req, res) => {
     try {
