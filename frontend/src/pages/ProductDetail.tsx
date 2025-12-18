@@ -19,7 +19,17 @@ const ProductDetail = () => {
   const { id } = useParams();
   const { data: product, isLoading } = useQuery<Product | undefined>({
     queryKey: ["product", id],
-    queryFn: () => (id ? getProduct(id) : Promise.resolve(undefined)),
+    queryFn: async () => {
+      if (!id) return undefined;
+      try {
+        return await getProduct(id);
+      } catch (error) {
+        // If it's a 404 or other error, return undefined instead of throwing
+        // This allows us to show "Product not found" instead of an error state
+        return undefined;
+      }
+    },
+    enabled: !!id, // Only run the query when id exists
   });
   const { data: all } = useQuery<Product[]>({ queryKey: ["products"], queryFn: getProducts });
   const qc = useQueryClient();
@@ -99,7 +109,8 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product) {
+  // Show "Product not found" only when loading is complete and product is undefined
+  if (!isLoading && !product) {
     return (
       <div className="container px-4 py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Product not found</h1>
