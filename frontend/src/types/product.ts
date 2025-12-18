@@ -29,6 +29,8 @@ export interface Product {
   reviews: Review[];
   category: string;
   occasion?: string;
+  isSale?: boolean;
+  isBestseller?: boolean;
 }
 
 export interface Review {

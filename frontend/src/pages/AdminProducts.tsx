@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Product } from "@/types/product";
 import { authFetch, getRole, getToken, apiBase } from "@/lib/auth";
@@ -32,6 +33,8 @@ const AdminProducts = () => {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [editOriginalPrice, setEditOriginalPrice] = useState<string>("");
   const [editSaveAmount, setEditSaveAmount] = useState<string>("");
+  const [editIsSale, setEditIsSale] = useState<boolean>(false);
+  const [editIsBestseller, setEditIsBestseller] = useState<boolean>(false);
   const [manageCategory] = useState<string>("Lenin");
 
   const { data: products = [] } = useQuery<Product[]>({
@@ -310,10 +313,12 @@ const AdminProducts = () => {
                   <img src={(p.images?.[0] && !String(p.images?.[0]).startsWith("blob:")) ? p.images![0] : "/placeholder.svg"} alt={p.name} className="w-20 h-20 rounded-md object-cover border" />
                   <div>
                     <p className="font-semibold">{p.name}</p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Badge variant="outline">₹{p.price}</Badge>
                       <Badge variant="secondary">{p.stock} in stock</Badge>
                       {p.discount && <Badge>{p.discount}% OFF</Badge>}
+                      {p.isSale && <Badge variant="destructive">Sale</Badge>}
+                      {p.isBestseller && <Badge className="bg-yellow-500 text-white">Bestseller</Badge>}
                     </div>
                   </div>
                 </div>
@@ -333,6 +338,8 @@ const AdminProducts = () => {
                     setEditImages((p.images || []).filter((u) => typeof u === "string" && u && !String(u).startsWith("blob:")));
                     setEditOriginalPrice(p.originalPrice ? String(p.originalPrice) : "");
                     setEditSaveAmount(p.saveAmount ? String(p.saveAmount) : "");
+                    setEditIsSale(p.isSale || false);
+                    setEditIsBestseller(p.isBestseller || false);
                   }}
                 >
                   <Plus className="h-4 w-4" />
@@ -367,6 +374,28 @@ const AdminProducts = () => {
                   <div>
                     <Label>Name</Label>
                     <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                  </div>
+                  <div className="sm:col-span-3 flex items-center gap-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-is-sale"
+                        checked={editIsSale}
+                        onCheckedChange={(checked) => setEditIsSale(checked === true)}
+                      />
+                      <Label htmlFor="edit-is-sale" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Sale
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-is-bestseller"
+                        checked={editIsBestseller}
+                        onCheckedChange={(checked) => setEditIsBestseller(checked === true)}
+                      />
+                      <Label htmlFor="edit-is-bestseller" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Bestseller
+                      </Label>
+                    </div>
                   </div>
                   <div className="sm:col-span-3 flex items-center gap-3">
                     {editOriginalPrice && (
@@ -447,6 +476,8 @@ const AdminProducts = () => {
                             images: editImages,
                             originalPrice: editOriginalPrice ? Number(editOriginalPrice) : undefined,
                             saveAmount: editSaveAmount ? Number(editSaveAmount) : undefined,
+                            isSale: editIsSale,
+                            isBestseller: editIsBestseller,
                           },
                         });
                         setEditingId(null);
