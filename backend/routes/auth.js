@@ -127,19 +127,32 @@ export default function register({ app, getDb, signToken, getFileUsers, setFileU
         }
       }
 
+      // Check if SMTP is configured
+      if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.error("SMTP credentials not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS in backend/.env");
+        // Still return success to prevent email enumeration, but log the error
+        return res.json({ message: "If an account exists with this email, a password reset link has been sent." });
+      }
+
       // Send email
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
       const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-      const transporter = nodemailer.createTransport({
+      const transporterConfig = {
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT) || 587,
         secure: process.env.SMTP_SECURE === "true",
-        auth: {
+      };
+
+      // Only add auth if credentials are provided
+      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        transporterConfig.auth = {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
-        },
-      });
+        };
+      }
+
+      const transporter = nodemailer.createTransport(transporterConfig);
 
       await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -157,7 +170,13 @@ export default function register({ app, getDb, signToken, getFileUsers, setFileU
       res.json({ message: "If an account exists with this email, a password reset link has been sent." });
     } catch (e) {
       console.error("Forgot password error:", e);
-      res.status(500).json({ error: "Failed to send reset email" });
+      // Check if it's an authentication error
+      if (e.code === "EAUTH") {
+        return res.status(500).json({ 
+          error: "SMTP authentication failed. Please check your SMTP credentials in backend/.env" 
+        });
+      }
+      res.status(500).json({ error: "Failed to send reset email. Please check your SMTP configuration." });
     }
   });
 

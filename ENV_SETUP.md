@@ -37,6 +37,15 @@ Located in: `backend/.env`
 - `PUBLIC_BASE_URL` - Public base URL for file uploads (optional)
 - `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` - AWS S3 config (optional)
 
+### SMTP Configuration (for Password Reset):
+- `SMTP_HOST` - SMTP server hostname (e.g., `smtp.gmail.com`)
+- `SMTP_PORT` - SMTP server port (default: 587)
+- `SMTP_SECURE` - Use secure connection (`true` or `false`, default: `false`)
+- `SMTP_USER` - SMTP username/email
+- `SMTP_PASS` - SMTP password or app password
+- `SMTP_FROM` - From email address (optional, defaults to SMTP_USER)
+- `FRONTEND_URL` - Frontend URL for reset links (default: `http://localhost:8080`)
+
 ### Example:
 ```env
 PORT=3001
@@ -49,7 +58,18 @@ S3_BUCKET=
 S3_REGION=
 S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
+
+# SMTP Configuration (for password reset emails)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@gmail.com
+FRONTEND_URL=http://localhost:8080
 ```
+
+**Note for Gmail users**: You need to use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password. Enable 2-Step Verification first, then generate an app password.
 
 ## Setup Instructions
 
