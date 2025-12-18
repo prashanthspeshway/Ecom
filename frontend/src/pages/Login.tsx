@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login, getRole, syncRoleFromBackend } from "@/lib/auth";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
