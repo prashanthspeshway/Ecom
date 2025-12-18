@@ -100,13 +100,6 @@ const Checkout = () => {
                 <RadioGroupItem value="razorpay" id="razorpay" />
                 <Label htmlFor="razorpay" className="flex-1 cursor-pointer">Razorpay (Cards, UPI, Wallets, Net Banking)</Label>
               </div>
-              {pmethod === "razorpay" && (
-                <div className="mt-3 p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    You will be redirected to Razorpay's secure payment gateway to complete your payment.
-                  </p>
-                </div>
-              )}
               <div className="flex items-center space-x-2 p-4 border rounded-lg mt-4">
                 <RadioGroupItem value="cod" id="cod" />
                 <Label htmlFor="cod" className="flex-1 cursor-pointer">Cash on Delivery</Label>
