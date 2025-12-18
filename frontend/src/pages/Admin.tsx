@@ -24,132 +24,63 @@ const Admin = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    let timeoutId: NodeJS.Timeout | null = null;
-    
-    (async () => {
+    const checkAuth = async () => {
       const token = getToken();
       if (!token) {
-        if (isMounted) {
-          navigate("/login");
-        }
+        navigate("/login");
         return;
       }
       
-      // Check localStorage first for faster initial load
+      // Check localStorage first - if admin, allow immediately
       const currentRole = getRole();
       if (currentRole === "admin") {
-        // Set authorized immediately if we have admin role in localStorage
-        if (isMounted) {
-          setIsAuthorized(true);
-          setIsChecking(false);
-        }
+        setIsAuthorized(true);
+        setIsChecking(false);
       }
       
-      // Then verify with backend (but don't block if we already have admin role)
+      // Verify with backend in background
       try {
         const res = await authFetch("/api/auth/me");
         if (res.ok) {
           const data = await res.json();
           const backendRole = data.role || data.user?.role || null;
           if (backendRole && backendRole !== "undefined") {
-            // Update localStorage if different
-            if (backendRole !== currentRole) {
-              localStorage.setItem("auth_role", backendRole);
-              if (isMounted) {
-                setRole(backendRole);
-              }
-            }
+            localStorage.setItem("auth_role", backendRole);
+            setRole(backendRole);
             if (backendRole === "admin") {
-              if (isMounted) {
-                setIsAuthorized(true);
-                setIsChecking(false);
-              }
+              setIsAuthorized(true);
             } else {
               // Not admin, redirect
-              if (isMounted) {
-                navigate("/login");
-              }
-            }
-          } else {
-            // Role not found in backend
-            if (currentRole !== "admin") {
-              if (isMounted) {
-                navigate("/login");
-              }
-            }
-          }
-        } else {
-          // API call failed - if we have admin in localStorage, allow access
-          if (currentRole !== "admin") {
-            if (isMounted) {
               navigate("/login");
             }
-          } else {
-            // We have admin role, allow access even if API fails
-            if (isMounted) {
-              setIsAuthorized(true);
-              setIsChecking(false);
-            }
           }
         }
+        setIsChecking(false);
       } catch (e) {
-        // If API fails but we have admin role in localStorage, allow access
-        // (in case backend is temporarily down)
-        if (currentRole === "admin") {
-          if (isMounted) {
-            setIsAuthorized(true);
-            setIsChecking(false);
-          }
-        } else {
-          if (isMounted) {
-            navigate("/login");
-          }
-        }
-      }
-    })();
-    
-    // Fallback timeout - if checking takes too long, allow access if we have admin role
-    timeoutId = setTimeout(() => {
-      if (isMounted && isChecking) {
-        const currentRole = getRole();
+        // If API fails but we have admin in localStorage, allow access
         if (currentRole === "admin") {
           setIsAuthorized(true);
-          setIsChecking(false);
         }
+        setIsChecking(false);
       }
-    }, 3000);
-    
-    return () => {
-      isMounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [navigate, isChecking]); // Added isChecking to dependencies
+    
+    checkAuth();
+  }, [navigate]);
 
-  if (isChecking) {
-    return (
-      <div className="container px-4 py-16 text-center">
-        <p>Verifying admin access...</p>
-      </div>
-    );
-  }
-
-  // Check authorization - be more lenient to prevent blank pages
+  // Check authorization
   const currentRole = getRole();
   const hasToken = getToken();
+  const isAdmin = currentRole === "admin" || isAuthorized;
   
-  // If we're still checking, show loading
-  if (isChecking) {
+  // Show loading while checking (only if we don't have admin role)
+  if (isChecking && !isAdmin) {
     return (
       <div className="container px-4 py-16 text-center">
         <p>Verifying admin access...</p>
       </div>
     );
   }
-  
-  // Allow access if we have admin role in localStorage OR if authorized
-  // This prevents blank pages if backend check is slow
-  const isAdmin = currentRole === "admin" || isAuthorized;
   
   if (!hasToken) {
     return (
@@ -171,6 +102,8 @@ const Admin = () => {
       </div>
     );
   }
+  
+  // If we get here, user is authorized - render admin panel
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["admin-products"],
