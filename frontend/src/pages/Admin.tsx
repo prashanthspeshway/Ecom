@@ -131,7 +131,6 @@ const Admin = () => {
       qc.refetchQueries({ queryKey: ["products"] });
       toast("Product created successfully");
       setForm(initialForm);
-      setSelectedLeninSub("");
       setThumbnailFile(null);
       setFiles([null, null, null, null, null]);
       setSelectedPreviewIndex(0);
