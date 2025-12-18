@@ -21,12 +21,17 @@ const Admin = () => {
   const qc = useQueryClient();
   const [role, setRole] = useState<string | null>(getRole());
   const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    
     (async () => {
       const token = getToken();
       if (!token) {
-        navigate("/login");
+        if (isMounted) {
+          navigate("/login");
+        }
         return;
       }
       
@@ -38,37 +43,67 @@ const Admin = () => {
           const backendRole = data.role || data.user?.role || null;
           if (backendRole && backendRole !== "undefined") {
             // Update localStorage if different
-            if (backendRole !== role) {
+            const currentRole = getRole();
+            if (backendRole !== currentRole) {
               localStorage.setItem("auth_role", backendRole);
-              setRole(backendRole);
+              if (isMounted) {
+                setRole(backendRole);
+              }
             }
-            if (backendRole !== "admin") {
-              navigate("/login");
+            if (backendRole === "admin") {
+              if (isMounted) {
+                setIsAuthorized(true);
+                setIsChecking(false);
+              }
+              return;
+            } else {
+              if (isMounted) {
+                navigate("/login");
+              }
               return;
             }
           } else {
             // Role not found in backend, redirect to login
-            navigate("/login");
+            if (isMounted) {
+              navigate("/login");
+            }
             return;
           }
         } else {
           // API call failed, check if we have a valid role in localStorage
-          if (role !== "admin") {
-            navigate("/login");
-            return;
+          const currentRole = getRole();
+          if (currentRole === "admin") {
+            if (isMounted) {
+              setIsAuthorized(true);
+              setIsChecking(false);
+            }
+          } else {
+            if (isMounted) {
+              navigate("/login");
+            }
           }
         }
       } catch (e) {
         // If API fails but we have admin role in localStorage, allow access
         // (in case backend is temporarily down)
-        if (role !== "admin") {
-          navigate("/login");
-          return;
+        const currentRole = getRole();
+        if (currentRole === "admin") {
+          if (isMounted) {
+            setIsAuthorized(true);
+            setIsChecking(false);
+          }
+        } else {
+          if (isMounted) {
+            navigate("/login");
+          }
         }
       }
-      setIsChecking(false);
     })();
-  }, [navigate, role]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]); // Removed 'role' from dependencies to prevent infinite loops
 
   if (isChecking) {
     return (
@@ -78,8 +113,12 @@ const Admin = () => {
     );
   }
 
-  if (role !== "admin" || !getToken()) {
-    return null; // Will redirect in useEffect
+  if (!isAuthorized || role !== "admin" || !getToken()) {
+    return (
+      <div className="container px-4 py-16 text-center">
+        <p>Unauthorized. Redirecting to login...</p>
+      </div>
+    );
   }
 
   const { data: products = [] } = useQuery<Product[]>({
