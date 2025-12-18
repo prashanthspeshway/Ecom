@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -371,6 +372,135 @@ const Admin = () => {
 
   const [adminSearchTerm, setAdminSearchTerm] = useState("");
 
+  function ProductSelectionDialog({ 
+    open, 
+    onOpenChange, 
+    onSelect, 
+    products, 
+    categoriesData 
+  }: { 
+    open: boolean; 
+    onOpenChange: (open: boolean) => void; 
+    onSelect: (productId: string) => void;
+    products: Product[];
+    categoriesData: string[];
+  }) {
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const filteredProducts = useMemo(() => {
+      let filtered = products;
+      
+      // Filter by category
+      if (selectedCategory) {
+        filtered = filtered.filter((p) => 
+          (p.category || "").toLowerCase().includes(selectedCategory.toLowerCase())
+        );
+      }
+      
+      // Filter by search term
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        filtered = filtered.filter((p) =>
+          [p.name, p.brand, p.category].some((v) => (v || "").toLowerCase().includes(term))
+        );
+      }
+      
+      return filtered;
+    }, [products, selectedCategory, searchTerm]);
+
+    const catCounts = useMemo(() => {
+      const counts: Record<string, number> = {};
+      (categoriesData || []).forEach((c) => {
+        const lc = c.toLowerCase();
+        counts[c] = (products || []).filter((p) => (p.category || "").toLowerCase().includes(lc)).length;
+      });
+      return counts;
+    }, [products, categoriesData]);
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select a Product</DialogTitle>
+            <DialogDescription>
+              Choose a product to add. You can filter by category or search by name.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Search */}
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search products..."
+              className="w-full"
+            />
+
+            {/* Categories */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Categories</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    selectedCategory === null ? "bg-primary/10 ring-1 ring-primary" : "bg-card"
+                  }`}
+                >
+                  All [{products.length}]
+                </button>
+                {(categoriesData || []).map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setSelectedCategory(c)}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      selectedCategory?.toLowerCase() === c.toLowerCase()
+                        ? "bg-primary/10 ring-1 ring-primary"
+                        : "bg-card"
+                    }`}
+                  >
+                    {c} [{catCounts[c] ?? 0}]
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Products Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="border rounded-lg p-3 cursor-pointer hover:bg-accent transition-colors"
+                  onClick={() => {
+                    onSelect(product.id);
+                    onOpenChange(false);
+                  }}
+                >
+                  <img
+                    src={(product.images?.[0] && !String(product.images[0]).startsWith("blob:")) 
+                      ? product.images[0] 
+                      : "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-full h-32 object-cover rounded-md mb-2"
+                  />
+                  <p className="text-sm font-semibold truncate">{product.name}</p>
+                  <p className="text-xs text-muted-foreground">{product.category}</p>
+                  <p className="text-sm font-bold mt-1">₹{product.price.toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No products found. Try adjusting your filters.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   function BestSellersManager({ products }: { products: Product[] }) {
     const qc = useQueryClient();
     const { data: current = [] } = useQuery<Product[]>({
@@ -381,10 +511,14 @@ const Admin = () => {
       },
     });
     const [slotIds, setSlotIds] = useState<string[]>(["", "", "", "", ""]);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+    
     useEffect(() => {
       const ids = current.map((p) => p.id);
       setSlotIds((["", "", "", "", ""]).map((_, i) => ids[i] || ""));
     }, [current]);
+    
     const saveListMutation = useMutation({
       mutationFn: async (ids: string[]) => {
         const res = await authFetch("/api/bestsellers", {
@@ -401,76 +535,69 @@ const Admin = () => {
         toast("Bestsellers updated");
       },
     });
-    const delMutation = useMutation({
-      mutationFn: async (id: string) => {
-        const res = await authFetch(`/api/bestsellers/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Delete failed");
-        return res.json();
-      },
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["bestsellers"] });
-        qc.refetchQueries({ queryKey: ["bestsellers"] });
-      },
-    });
+
+    const handleProductSelect = (productId: string) => {
+      if (selectedSlotIndex !== null) {
+        const newSlotIds = [...slotIds];
+        newSlotIds[selectedSlotIndex] = productId;
+        setSlotIds(newSlotIds);
+        const arr = newSlotIds.filter(Boolean);
+        saveListMutation.mutate(arr);
+      }
+    };
+
+    const handleRemove = (index: number) => {
+      const newSlotIds = [...slotIds];
+      newSlotIds[index] = "";
+      setSlotIds(newSlotIds);
+      const arr = newSlotIds.filter(Boolean);
+      saveListMutation.mutate(arr);
+    };
+
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[0,1,2,3,4].map((idx) => {
-            const pid = slotIds[idx] || "";
-            const p = pid ? current.find((x) => x.id === pid) : undefined;
-            return (
-              <div key={`slot-${idx}`}>
-                <div className="flex gap-2 items-center mb-2">
-                  <select
-                    className="border rounded-md px-2 py-1 bg-background w-full"
-                    value={pid}
-                    onChange={(e) => setSlotIds((ids) => { const ni = [...ids]; ni[idx] = e.target.value; return ni; })}
-                  >
-                    <option value="">Select product</option>
-                    {products.map((pp) => (
-                      <option key={pp.id} value={pp.id}>{pp.name}</option>
-                    ))}
-                  </select>
-                  <Button
-                    onClick={() => {
-                      const arr = slotIds.map((x) => x).filter(Boolean);
-                      saveListMutation.mutate(arr);
-                    }}
-                    disabled={!slotIds[idx]}
-                  >Add</Button>
-                </div>
-                {p ? (
-                  <>
-                    <ProductCard product={p} compact />
-                    <div className="mt-2 flex justify-end">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSlotIds((ids) => { const ni = [...ids]; ni[idx] = ""; return ni; });
-                          const arr = slotIds.map((x, i) => (i === idx ? "" : x)).filter(Boolean);
-                          saveListMutation.mutate(arr);
-                        }}
-                      >Remove</Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center">
-                    <button
-                      type="button"
-                      className="h-12 w-12 rounded-full border bg-background flex items-center justify-center"
-                      onClick={() => slotIds[idx] && saveListMutation.mutate(slotIds.filter(Boolean))}
-                      disabled={!slotIds[idx]}
+      <>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[0,1,2,3,4].map((idx) => {
+              const pid = slotIds[idx] || "";
+              const p = pid ? current.find((x) => x.id === pid) : undefined;
+              return (
+                <div key={`slot-${idx}`}>
+                  {p ? (
+                    <>
+                      <ProductCard product={p} compact />
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemove(idx)}
+                        >Remove</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div 
+                      className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setSelectedSlotIndex(idx);
+                        setDialogOpen(true);
+                      }}
                     >
-                      <Plus className="h-6 w-6" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      <Plus className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+        <ProductSelectionDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSelect={handleProductSelect}
+          products={products}
+          categoriesData={categoriesData || []}
+        />
+      </>
     );
   }
 
@@ -484,10 +611,14 @@ const Admin = () => {
       },
     });
     const [slotIds, setSlotIds] = useState<string[]>(["", "", "", "", ""]);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+    
     useEffect(() => {
       const ids = current.map((p) => p.id);
       setSlotIds((["", "", "", "", ""]).map((_, i) => ids[i] || ""));
     }, [current]);
+    
     const saveListMutation = useMutation({
       mutationFn: async (ids: string[]) => {
         const res = await authFetch("/api/featured", {
@@ -504,76 +635,69 @@ const Admin = () => {
         toast("Featured collection updated");
       },
     });
-    const delMutation = useMutation({
-      mutationFn: async (id: string) => {
-        const res = await authFetch(`/api/featured/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Delete failed");
-        return res.json();
-      },
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: ["featured"] });
-        qc.refetchQueries({ queryKey: ["featured"] });
-      },
-    });
+
+    const handleProductSelect = (productId: string) => {
+      if (selectedSlotIndex !== null) {
+        const newSlotIds = [...slotIds];
+        newSlotIds[selectedSlotIndex] = productId;
+        setSlotIds(newSlotIds);
+        const arr = newSlotIds.filter(Boolean);
+        saveListMutation.mutate(arr);
+      }
+    };
+
+    const handleRemove = (index: number) => {
+      const newSlotIds = [...slotIds];
+      newSlotIds[index] = "";
+      setSlotIds(newSlotIds);
+      const arr = newSlotIds.filter(Boolean);
+      saveListMutation.mutate(arr);
+    };
+
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[0,1,2,3,4].map((idx) => {
-            const pid = slotIds[idx] || "";
-            const p = pid ? current.find((x) => x.id === pid) : undefined;
-            return (
-              <div key={`slot-${idx}`}>
-                <div className="flex gap-2 items-center mb-2">
-                  <select
-                    className="border rounded-md px-2 py-1 bg-background w-full"
-                    value={pid}
-                    onChange={(e) => setSlotIds((ids) => { const ni = [...ids]; ni[idx] = e.target.value; return ni; })}
-                  >
-                    <option value="">Select product</option>
-                    {products.map((pp) => (
-                      <option key={pp.id} value={pp.id}>{pp.name}</option>
-                    ))}
-                  </select>
-                  <Button
-                    onClick={() => {
-                      const arr = slotIds.map((x) => x).filter(Boolean);
-                      saveListMutation.mutate(arr);
-                    }}
-                    disabled={!slotIds[idx]}
-                  >Add</Button>
-                </div>
-                {p ? (
-                  <>
-                    <ProductCard product={p} compact />
-                    <div className="mt-2 flex justify-end">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setSlotIds((ids) => { const ni = [...ids]; ni[idx] = ""; return ni; });
-                          const arr = slotIds.map((x, i) => (i === idx ? "" : x)).filter(Boolean);
-                          saveListMutation.mutate(arr);
-                        }}
-                      >Remove</Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center">
-                    <button
-                      type="button"
-                      className="h-12 w-12 rounded-full border bg-background flex items-center justify-center"
-                      onClick={() => slotIds[idx] && saveListMutation.mutate(slotIds.filter(Boolean))}
-                      disabled={!slotIds[idx]}
+      <>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[0,1,2,3,4].map((idx) => {
+              const pid = slotIds[idx] || "";
+              const p = pid ? current.find((x) => x.id === pid) : undefined;
+              return (
+                <div key={`slot-${idx}`}>
+                  {p ? (
+                    <>
+                      <ProductCard product={p} compact />
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemove(idx)}
+                        >Remove</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div 
+                      className="relative overflow-hidden rounded-lg bg-card aspect-[3/4] border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setSelectedSlotIndex(idx);
+                        setDialogOpen(true);
+                      }}
                     >
-                      <Plus className="h-6 w-6" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      <Plus className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+        <ProductSelectionDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSelect={handleProductSelect}
+          products={products}
+          categoriesData={categoriesData || []}
+        />
+      </>
     );
   }
 
