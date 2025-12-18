@@ -17,6 +17,7 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminSupport from "./pages/AdminSupport";
 import AdminSettings from "./pages/AdminSettings";
+import PageView from "./pages/PageView";
 import OrderTracking from "./pages/OrderTracking";
 import NotFound from "./pages/NotFound";
 import Wishlist from "./pages/Wishlist";
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/support" element={<AdminSupport />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/pages/:slug" element={<PageView />} />
           <Route path="/order/:id" element={<OrderTracking />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

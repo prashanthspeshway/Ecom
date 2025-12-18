@@ -23,6 +23,7 @@ import registerAdminOrders from "./routes/adminOrders.js";
 import registerWishlist from "./routes/wishlist.js";
 import registerCategoryTiles from "./routes/categoryTiles.js";
 import registerCarousel from "./routes/carousel.js";
+import registerPages from "./routes/pages.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,8 @@ const usersPath = path.join(__dirname, "data", "users.json");
 let fileUsers = [];
 const carouselPath = path.join(__dirname, "data", "carousel.json");
 let carousel = [];
+const pagesPath = path.join(__dirname, "data", "pages.json");
+let pages = [];
 
 function loadData() {
   try {
@@ -155,6 +158,18 @@ function loadData() {
     try { fs.mkdirSync(path.dirname(carouselPath), { recursive: true }); } catch {}
     try { fs.writeFileSync(carouselPath, JSON.stringify(carousel, null, 2)); } catch {}
   }
+  try {
+    const raw = fs.readFileSync(pagesPath, "utf-8");
+    pages = JSON.parse(raw);
+  } catch (e) {
+    // Initialize with default pages if file doesn't exist
+    pages = [
+      { slug: "about-us", title: "About Us", content: "<h1>About Us</h1><p>Welcome to Saree Elegance. We are dedicated to providing premium handcrafted sarees.</p>", updatedAt: Date.now() },
+      { slug: "contact-us", title: "Contact Us", content: "<h1>Contact Us</h1><p>Get in touch with us for any queries or support.</p>", updatedAt: Date.now() },
+    ];
+    try { fs.mkdirSync(path.dirname(pagesPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2)); } catch {}
+  }
 }
 
 loadData();
@@ -193,6 +208,10 @@ async function initDb() {
       const bestColl = db.collection("bestsellers");
       if (await bestColl.countDocuments() === 0 && Array.isArray(bestsellerIds) && bestsellerIds.length) {
         await bestColl.insertMany(bestsellerIds.map((id) => ({ id })));
+      }
+      const pagesColl = db.collection("pages");
+      if (await pagesColl.countDocuments() === 0 && Array.isArray(pages) && pages.length) {
+        await pagesColl.insertMany(pages);
       }
       const ordColl = db.collection("orders");
       if (await ordColl.countDocuments() === 0 && orders && typeof orders === "object") {
@@ -413,6 +432,15 @@ initDb().finally(() => {
       resolveLocal,
       uploadLocalPath,
     });
+    registerPages({
+      app,
+      getDb: () => db,
+      authMiddleware,
+      adminOnly,
+      getPages: () => pages,
+      setPages: (arr) => { pages = arr; },
+      savePages: savePagesToFile,
+    });
     app.listen(port, () => {
       console.log(`[backend] listening on http://localhost:${port}`);
     });
@@ -526,5 +554,11 @@ function saveUsersToFile() {
 function saveCarouselToFile() {
   try {
     fs.writeFileSync(carouselPath, JSON.stringify(carousel, null, 2));
+  } catch {}
+}
+
+function savePagesToFile() {
+  try {
+    fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2));
   } catch {}
 }

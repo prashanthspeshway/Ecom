@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,8 @@ const AdminSupport = () => {
   const [isChecking, setIsChecking] = useState(true);
   const [supportMessages, setSupportMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pages, setPages] = useState<Array<{ slug: string; title: string; content: string }>>([]);
+  const [editingPage, setEditingPage] = useState<{ slug: string; title: string; content: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -60,18 +63,73 @@ const AdminSupport = () => {
 
   useEffect(() => {
     if (!isChecking && role === "admin") {
+      loadPages();
       loadSupportMessages();
     }
   }, [isChecking, role]);
 
-  const loadSupportMessages = async () => {
+  const loadPages = async () => {
     try {
       setLoading(true);
+      const res = await authFetch("/api/pages/admin/all");
+      if (res.ok) {
+        const data = await res.json();
+        setPages(data || []);
+      }
+    } catch (e) {
+      toast.error("Failed to load pages");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSupportMessages = async () => {
+    try {
       // This would fetch from your backend API
       // For now, showing a placeholder
       setSupportMessages([]);
     } catch (e) {
       toast.error("Failed to load support messages");
+    }
+  };
+
+  const savePage = async (page: { slug: string; title: string; content: string }) => {
+    try {
+      setLoading(true);
+      const res = await authFetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(page),
+      });
+      if (res.ok) {
+        toast.success("Page saved successfully");
+        await loadPages();
+        setEditingPage(null);
+        // Invalidate footer pages query to refresh footer links
+        qc.invalidateQueries({ queryKey: ["footer-pages"] });
+      } else {
+        toast.error("Failed to save page");
+      }
+    } catch (e) {
+      toast.error("Failed to save page");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePage = async (slug: string) => {
+    if (!confirm("Are you sure you want to delete this page?")) return;
+    try {
+      setLoading(true);
+      const res = await authFetch(`/api/pages/${slug}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Page deleted successfully");
+        await loadPages();
+      } else {
+        toast.error("Failed to delete page");
+      }
+    } catch (e) {
+      toast.error("Failed to delete page");
     } finally {
       setLoading(false);
     }
@@ -132,22 +190,87 @@ const AdminSupport = () => {
           </div>
 
           <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold mb-4">Support Settings</h2>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="support-email">Support Email</Label>
-                <Input id="support-email" placeholder="support@example.com" />
+            <h2 className="text-xl font-semibold mb-4">Manage Pages</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              These pages appear in the Support column of the footer. Users can click on them to view the content.
+            </p>
+            
+            {editingPage ? (
+              <div className="space-y-4 border rounded-lg p-4">
+                <div>
+                  <Label htmlFor="page-slug">Slug (URL-friendly, e.g., "about-us")</Label>
+                  <Input
+                    id="page-slug"
+                    value={editingPage.slug}
+                    onChange={(e) => setEditingPage({ ...editingPage, slug: e.target.value })}
+                    placeholder="about-us"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="page-title">Title (shown in footer)</Label>
+                  <Input
+                    id="page-title"
+                    value={editingPage.title}
+                    onChange={(e) => setEditingPage({ ...editingPage, title: e.target.value })}
+                    placeholder="About Us"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="page-content">Content (HTML allowed)</Label>
+                  <Textarea
+                    id="page-content"
+                    value={editingPage.content}
+                    onChange={(e) => setEditingPage({ ...editingPage, content: e.target.value })}
+                    placeholder="<h1>About Us</h1><p>Content here...</p>"
+                    rows={10}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => savePage(editingPage)} disabled={loading}>
+                    {loading ? "Saving..." : "Save Page"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setEditingPage(null)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="support-phone">Support Phone</Label>
-                <Input id="support-phone" placeholder="+1 (555) 123-4567" />
-              </div>
-              <div>
-                <Label htmlFor="support-hours">Support Hours</Label>
-                <Input id="support-hours" placeholder="Mon-Fri 9AM-5PM" />
-              </div>
-              <Button>Save Settings</Button>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2 mb-4">
+                  {pages.map((page) => (
+                    <div key={page.slug} className="flex items-center justify-between border rounded-lg p-3">
+                      <div>
+                        <div className="font-semibold">{page.title}</div>
+                        <div className="text-sm text-muted-foreground">/{page.slug}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingPage({ ...page })}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deletePage(page.slug)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => setEditingPage({ slug: "", title: "", content: "" })}
+                  variant="secondary"
+                >
+                  Add New Page
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
