@@ -125,6 +125,8 @@ const AdminSupport = () => {
       if (res.ok) {
         toast.success("Page deleted successfully");
         await loadPages();
+        // Invalidate footer pages query to refresh footer links
+        qc.invalidateQueries({ queryKey: ["footer-pages"] });
       } else {
         toast.error("Failed to delete page");
       }
