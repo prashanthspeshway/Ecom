@@ -28,11 +28,28 @@ export default defineConfig(async ({ mode }) => {
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
+          timeout: 10000,
+          configure: (proxy, _options) => {
+            proxy.on("error", (err, _req, _res) => {
+              // Suppress connection refused errors when backend is not running
+              if (err.code !== "ECONNREFUSED") {
+                console.error("Proxy error:", err);
+              }
+            });
+          },
         },
         "/uploads": {
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
+          timeout: 10000,
+          configure: (proxy, _options) => {
+            proxy.on("error", (err, _req, _res) => {
+              if (err.code !== "ECONNREFUSED") {
+                console.error("Proxy error:", err);
+              }
+            });
+          },
         },
       },
     },
@@ -45,11 +62,27 @@ export default defineConfig(async ({ mode }) => {
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
+          timeout: 10000,
+          configure: (proxy, _options) => {
+            proxy.on("error", (err, _req, _res) => {
+              if (err.code !== "ECONNREFUSED") {
+                console.error("Proxy error:", err);
+              }
+            });
+          },
         },
         "/uploads": {
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
+          timeout: 10000,
+          configure: (proxy, _options) => {
+            proxy.on("error", (err, _req, _res) => {
+              if (err.code !== "ECONNREFUSED") {
+                console.error("Proxy error:", err);
+              }
+            });
+          },
         },
       },
     },
