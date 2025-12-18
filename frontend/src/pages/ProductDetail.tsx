@@ -16,12 +16,16 @@ import { toggleWishlist, isWishlisted } from "@/lib/wishlist";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ProductDetail = () => {
-  const { id } = useParams();
+  const { id: rawId } = useParams();
+  // Decode the ID from URL (React Router should handle this, but we'll ensure it's decoded)
+  const id = rawId ? decodeURIComponent(rawId) : undefined;
+  
   const { data: product, isLoading } = useQuery<Product | undefined>({
     queryKey: ["product", id],
     queryFn: async () => {
       if (!id) return undefined;
       try {
+        // Try with the ID as-is first
         return await getProduct(id);
       } catch (error) {
         // If it's a 404 or other error, return undefined instead of throwing

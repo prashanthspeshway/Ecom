@@ -44,7 +44,7 @@ const Home = () => {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {data?.slice(0, 5).map((product) => (
+            {data?.filter(p => p && p.id).slice(0, 5).map((product) => (
               <ProductCard key={product.id} product={product} compact />
             ))}
           </div>
@@ -71,7 +71,7 @@ const Home = () => {
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {bestsellers.slice(0, 5).map((product) => (
+              {bestsellers.filter(p => p && p.id).slice(0, 5).map((product) => (
                 <ProductCard key={product.id} product={product} compact />
               ))}
             </div>

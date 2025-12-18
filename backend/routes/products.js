@@ -18,14 +18,29 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPro
 
   router.get("/:id", async (req, res) => {
     try {
+      const id = req.params.id;
       const db = getDb();
       if (db) {
-        const item = await db.collection("products").findOne({ id: req.params.id });
+        // Try to find by string ID first, then try as number if it's a numeric string
+        let item = await db.collection("products").findOne({ id: id });
+        if (!item && /^\d+$/.test(id)) {
+          // If ID is numeric string, also try finding by numeric ID
+          item = await db.collection("products").findOne({ id: Number(id) });
+        }
+        if (!item && /^\d+$/.test(id)) {
+          // Also try as string representation of number
+          item = await db.collection("products").findOne({ id: String(Number(id)) });
+        }
         if (!item) return res.status(404).json({ error: "Not found" });
         return res.json(item);
       }
       const products = getProducts();
-      const item = products.find((p) => p.id === req.params.id);
+      // Try exact match first
+      let item = products.find((p) => p.id === id || String(p.id) === String(id));
+      if (!item && /^\d+$/.test(id)) {
+        // If ID is numeric, try comparing as numbers
+        item = products.find((p) => Number(p.id) === Number(id));
+      }
       if (!item) return res.status(404).json({ error: "Not found" });
       res.json(item);
     } catch (e) {

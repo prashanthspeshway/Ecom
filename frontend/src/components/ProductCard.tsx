@@ -17,9 +17,14 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
   useEffect(() => {
     setWish(isWishlisted(product.id));
   }, [product.id]);
+  // Ensure product ID is valid and properly encoded
+  if (!product || !product.id) return null;
+  
+  const productId = String(product.id);
+  
   return (
     <div className="group relative">
-      <Link to={`/product/${product.id}`}>
+      <Link to={`/product/${encodeURIComponent(productId)}`}>
         <div className={`relative overflow-hidden rounded-lg bg-card ${compact ? "aspect-[3/4]" : "aspect-square"} mb-3`}>
           <img
             src={(product.images?.[0] && !String(product.images?.[0]).startsWith("blob:")) ? product.images![0] : "/placeholder.svg"}
@@ -40,7 +45,7 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
       </Link>
 
       <div className="space-y-2">
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${encodeURIComponent(productId)}`}>
           <h3 className={`font-serif ${compact ? "text-base" : "text-lg"} font-medium hover:text-primary transition-colors`}>
             {product.name}
           </h3>
