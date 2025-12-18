@@ -586,3 +586,9 @@ function savePagesToFile() {
     fs.writeFileSync(pagesPath, JSON.stringify(pages, null, 2));
   } catch {}
 }
+
+function saveSettingsToFile() {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  } catch {}
+}
