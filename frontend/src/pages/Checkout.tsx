@@ -190,7 +190,7 @@ const Checkout = () => {
                     order_id: orderData.id,
                     handler: async function (response: any) {
                       // Verify payment
-                      const verifyRes = await authFetch(`${apiBase}/api/payments/verify-payment`, {
+                      const verifyRes = await authFetch("/api/payments/verify-payment", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
