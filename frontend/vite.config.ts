@@ -29,8 +29,8 @@ export default defineConfig(async ({ mode }) => {
           changeOrigin: true,
           secure: false,
           timeout: 10000,
-          configure: (proxy, _options) => {
-            proxy.on("error", (err, _req, _res) => {
+          configure: (proxy: any, _options: any) => {
+            proxy.on("error", (err: any, _req: any, _res: any) => {
               // Suppress connection refused errors when backend is not running
               if (err.code !== "ECONNREFUSED") {
                 console.error("Proxy error:", err);
