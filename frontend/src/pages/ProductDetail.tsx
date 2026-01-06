@@ -49,8 +49,26 @@ const ProductDetail = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    setWish(product ? isWishlisted(product.id) : false);
+    if (product && product.id) {
+      setWish(isWishlisted(String(product.id)));
+    } else {
+      setWish(false);
+    }
   }, [id, product]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (product && product.id) {
+        setWish(isWishlisted(String(product.id)));
+      } else {
+        setWish(false);
+      }
+    };
+    window.addEventListener("wishlist:update", handler as EventListener);
+    return () => {
+      window.removeEventListener("wishlist:update", handler as EventListener);
+    };
+  }, [product]);
 
   useEffect(() => {
     (async () => {
@@ -290,7 +308,15 @@ const ProductDetail = () => {
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Add to Cart
               </Button>
-              <Button size="lg" variant="outline" onClick={() => { toggleWishlist(product); setWish(!wish); }}>
+              <Button size="lg" variant="outline" onClick={() => { 
+                toggleWishlist(product);
+                // Update state immediately - the write() function already updated localStorage
+                if (product && product.id) {
+                  setWish(isWishlisted(String(product.id)));
+                } else {
+                  setWish(false);
+                }
+              }}>
                 <Heart className={`h-5 w-5 ${wish ? "text-red-500 fill-red-500" : "text-muted-foreground"}`} />
               </Button>
               <Button size="lg" variant="outline">

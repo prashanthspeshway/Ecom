@@ -40,3 +40,6 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getSet
 
   app.use("/api/settings", router);
 }
+
+
+

@@ -2,27 +2,34 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/types/product";
 import { addToCart } from "@/lib/cart";
-import { removeFromWishlist } from "@/lib/wishlist";
+import { getWishlist, removeFromWishlist, syncWishlistFromServer } from "@/lib/wishlist";
+import { getToken } from "@/lib/auth";
 import { Heart } from "lucide-react";
 
 const Wishlist = () => {
   const [items, setItems] = useState<Product[]>([]);
+  
+  const updateItems = () => {
+    setItems(getWishlist());
+  };
+  
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("wishlist_items");
-      setItems(raw ? (JSON.parse(raw) as Product[]) : []);
-    } catch {
-      setItems([]);
+    // Sync from server if user is logged in
+    const token = getToken();
+    if (token) {
+      syncWishlistFromServer().then(() => {
+        updateItems();
+      }).catch(() => {
+        updateItems();
+      });
+    } else {
+      updateItems();
     }
   }, []);
+  
   useEffect(() => {
     const handler = () => {
-      try {
-        const raw = localStorage.getItem("wishlist_items");
-        setItems(raw ? (JSON.parse(raw) as Product[]) : []);
-      } catch {
-        setItems([]);
-      }
+      updateItems();
     };
     window.addEventListener("wishlist:update", handler as EventListener);
     window.addEventListener("storage", handler);
@@ -62,7 +69,12 @@ const Wishlist = () => {
               <Button variant="outline" onClick={() => { addToCart(p, 1); }}>
                 Add to Cart
               </Button>
-              <Button variant="destructive" onClick={() => { removeFromWishlist(p.id); }}>
+              <Button variant="destructive" onClick={() => { 
+                if (p.id) {
+                  removeFromWishlist(String(p.id));
+                  updateItems();
+                }
+              }}>
                 Remove
               </Button>
             </div>

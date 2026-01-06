@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { authFetch, clearAuth, getRole, getToken, getEmail } from "@/lib/auth";
 import type { Product } from "@/types/product";
 import { addToCart } from "@/lib/cart";
+import { getWishlist, removeFromWishlist, syncWishlistFromServer } from "@/lib/wishlist";
 
 const Account = () => {
   type Profile = { email: string; name?: string; role?: string } | null;
@@ -132,13 +133,35 @@ const Account = () => {
 
 const WishlistContent = () => {
   const [items, setItems] = useState<Product[]>([] as Product[]);
+  
+  const updateItems = () => {
+    setItems(getWishlist());
+  };
+  
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("wishlist_items");
-      setItems(raw ? (JSON.parse(raw) as Product[]) : []);
-    } catch {
-      setItems([]);
+    // Sync from server if user is logged in
+    const token = getToken();
+    if (token) {
+      syncWishlistFromServer().then(() => {
+        updateItems();
+      }).catch(() => {
+        updateItems();
+      });
+    } else {
+      updateItems();
     }
+  }, []);
+  
+  useEffect(() => {
+    const handler = () => {
+      updateItems();
+    };
+    window.addEventListener("wishlist:update", handler as EventListener);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("wishlist:update", handler as EventListener);
+      window.removeEventListener("storage", handler);
+    };
   }, []);
 
   if (!items.length) {
@@ -172,13 +195,10 @@ const WishlistContent = () => {
                 Add to Cart
               </Button>
               <Button variant="destructive" onClick={() => {
-                try {
-                  const raw = localStorage.getItem("wishlist_items");
-                  const list = raw ? (JSON.parse(raw) as Product[]) : [];
-                  const next = list.filter((x) => x.id !== p.id);
-                  localStorage.setItem("wishlist_items", JSON.stringify(next));
-                  setItems(next);
-                } catch { void 0; }
+                if (p.id) {
+                  removeFromWishlist(String(p.id));
+                  updateItems();
+                }
               }}>
                 Remove
               </Button>

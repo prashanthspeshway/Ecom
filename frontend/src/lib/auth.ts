@@ -125,12 +125,8 @@ export async function login(payload: { email: string; password: string }) {
     // Force set it again
     localStorage.setItem("auth_role", role);
   }
-  await syncAccountStateAfterAuth();
-  // Double-check role after sync
-  const finalRole = getRole();
-  if (finalRole !== role) {
-    localStorage.setItem("auth_role", role);
-  }
+  // Run sync in background without blocking login
+  syncAccountStateAfterAuth().catch(() => {});
   return data;
 }
 

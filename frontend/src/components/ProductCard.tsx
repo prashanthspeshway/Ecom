@@ -14,13 +14,41 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, compact }: ProductCardProps) => {
   const [wish, setWish] = useState(false);
+  
+  const updateWishState = () => {
+    if (product && product.id) {
+      setWish(isWishlisted(String(product.id)));
+    } else {
+      setWish(false);
+    }
+  };
+  
   useEffect(() => {
-    setWish(isWishlisted(product.id));
-  }, [product.id]);
+    updateWishState();
+  }, [product?.id]);
+  
+  useEffect(() => {
+    const handler = () => {
+      updateWishState();
+    };
+    window.addEventListener("wishlist:update", handler as EventListener);
+    return () => {
+      window.removeEventListener("wishlist:update", handler as EventListener);
+    };
+  }, [product?.id]);
+  
   // Ensure product ID is valid and properly encoded
   if (!product || !product.id) return null;
   
   const productId = String(product.id);
+  
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
+    // Update state immediately - the write() function already updated localStorage
+    updateWishState();
+  };
   
   return (
     <div className="group relative">
@@ -36,8 +64,8 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
               {product.discount}% OFF
             </Badge>
           )}
-          <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full" onClick={(e) => { e.preventDefault(); toggleWishlist(product); setWish(!wish); }}>
+          <div className={`absolute top-3 right-3 flex flex-col gap-2 transition-opacity ${wish ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full" onClick={handleWishlistToggle}>
               <Heart className={`h-4 w-4 ${wish ? "text-red-500 fill-red-500" : "text-muted-foreground"}`} />
             </Button>
           </div>

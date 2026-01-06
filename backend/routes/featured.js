@@ -66,3 +66,6 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getFea
 
   app.use("/api/featured", router);
 }
+
+
+

@@ -103,3 +103,6 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getPag
 
   app.use("/api/pages", router);
 }
+
+
+

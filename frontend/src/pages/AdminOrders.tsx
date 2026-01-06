@@ -10,7 +10,7 @@ import { authFetch, getRole, getToken } from "@/lib/auth";
 
 type Progress = { placed?: number; dispatched?: number; in_transit?: number; shipped?: number; out_for_delivery?: number; delivered?: number };
 type OrderItem = { productId: string; quantity: number; price?: number; name?: string; image?: string; progress?: Progress };
-type Order = { id: string; user: string; items: OrderItem[]; status: string; createdAt: number };
+type Order = { id: string; trackingId?: string; user: string; items: OrderItem[]; status: string; createdAt: number };
 
 const AdminOrders = () => {
   const qc = useQueryClient();
@@ -193,6 +193,7 @@ const AdminOrders = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Order ID</TableHead>
+                <TableHead>Tracking ID</TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Items</TableHead>
@@ -206,7 +207,14 @@ const AdminOrders = () => {
                 const total = (o.items || []).reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || 0)), 0);
                 return (
                   <TableRow key={o.id}>
-                    <TableCell className="font-mono">{o.id}</TableCell>
+                    <TableCell className="font-mono text-xs">{o.id}</TableCell>
+                    <TableCell>
+                      {o.trackingId ? (
+                        <span className="font-mono font-semibold">{o.trackingId}</span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">N/A</span>
+                      )}
+                    </TableCell>
                     <TableCell>{o.user}</TableCell>
                     <TableCell>{new Date(o.createdAt || Date.now()).toLocaleString()}</TableCell>
                     <TableCell>{o.items?.length || 0}</TableCell>

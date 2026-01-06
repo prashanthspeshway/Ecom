@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { authFetch, getToken } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
 
 type Progress = { placed?: number; dispatched?: number; in_transit?: number; shipped?: number; out_for_delivery?: number; delivered?: number };
 type Item = { productId: string; name: string; image?: string; quantity: number; price?: number; progress?: Progress };
-type Order = { id: string; items: Item[]; status: string; createdAt: number };
+type Order = { id: string; trackingId?: string; items: Item[]; status: string; createdAt: number };
 
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -46,7 +48,23 @@ const Orders = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-semibold">Order #{o.id}</div>
-                  <div className="text-sm text-muted-foreground">{new Date(o.createdAt || Date.now()).toLocaleString()}</div>
+                  {o.trackingId && (
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                      Tracking ID: <span className="font-mono font-semibold text-foreground">{o.trackingId}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-2 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(o.trackingId!);
+                          toast.success("Tracking ID copied to clipboard");
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </div>
+                  )}
+                  <div className="text-sm text-muted-foreground mt-1">{new Date(o.createdAt || Date.now()).toLocaleString()}</div>
                 </div>
                 <div className="text-sm">Status: <span className="font-medium">{o.status}</span></div>
               </div>

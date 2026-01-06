@@ -88,3 +88,6 @@ export default function register({ app, authMiddleware }) {
 
   app.use("/api/payments", router);
 }
+
+
+

@@ -161,6 +161,12 @@ const Layout = ({ children }: LayoutProps) => {
                   <Link to="/products?category=bestsellers" className="text-lg font-medium hover:text-primary">
                     Best Sellers
                   </Link>
+                  <Link to="/pages/about-us" className="text-lg font-medium hover:text-primary">
+                    About Us
+                  </Link>
+                  <Link to="/pages/blog" className="text-lg font-medium hover:text-primary">
+                    Blog
+                  </Link>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -185,6 +191,12 @@ const Layout = ({ children }: LayoutProps) => {
                 </Link>
                 <Link to="/products?category=bestsellers" className="text-sm font-medium hover:text-primary transition-colors">
                   Best Sellers
+                </Link>
+                <Link to="/pages/about-us" className="text-sm font-medium hover:text-primary transition-colors">
+                  About Us
+                </Link>
+                <Link to="/pages/blog" className="text-sm font-medium hover:text-primary transition-colors">
+                  Blog
                 </Link>
               </nav>
             )}
@@ -291,11 +303,16 @@ const Layout = ({ children }: LayoutProps) => {
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                {footerPages.map((page) => (
-                  <li key={page.slug}>
-                    <Link to={`/pages/${page.slug}`} className="hover:text-foreground">{page.title}</Link>
-                  </li>
-                ))}
+                <li>
+                  <Link to="/track-order" className="hover:text-foreground">Track Order</Link>
+                </li>
+                {footerPages
+                  .filter((page) => page.slug !== "about-us" && page.slug !== "blog")
+                  .map((page) => (
+                    <li key={page.slug}>
+                      <Link to={`/pages/${page.slug}`} className="hover:text-foreground">{page.title}</Link>
+                    </li>
+                  ))}
               </ul>
             </div>
             <div>

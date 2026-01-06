@@ -1,8 +1,52 @@
 import express from "express";
 import crypto from "crypto";
 
+// Generate a 12-digit tracking ID
+function generateTrackingId() {
+  // Generate a random 12-digit number
+  const min = 100000000000; // 12 digits minimum
+  const max = 999999999999; // 12 digits maximum
+  return String(Math.floor(Math.random() * (max - min + 1)) + min);
+}
+
 export default function register({ app, getDb, authMiddleware, adminOnly, getOrders, setOrders, saveOrders, getLastCheckout, setLastCheckout, getProducts, getCarts, setCarts, saveCarts }) {
   const router = express.Router();
+  
+  // Public endpoint to track order by tracking ID (no auth required)
+  router.get("/track/:trackingId", async (req, res) => {
+    try {
+      const { trackingId } = req.params;
+      if (!trackingId || trackingId.length !== 12 || !/^\d+$/.test(trackingId)) {
+        return res.status(400).json({ error: "Invalid tracking ID" });
+      }
+      
+      const db = getDb();
+      if (db) {
+        const order = await db.collection("orders").findOne({ trackingId });
+        if (!order) return res.status(404).json({ error: "Order not found" });
+        // Return order without sensitive user information
+        const { user, ...orderData } = order;
+        return res.json(orderData);
+      }
+      
+      // File-based search
+      const orders = getOrders();
+      let foundOrder = null;
+      for (const userEmail in orders) {
+        const userOrders = Array.isArray(orders[userEmail]) ? orders[userEmail] : [];
+        foundOrder = userOrders.find((o) => o.trackingId === trackingId);
+        if (foundOrder) break;
+      }
+      
+      if (!foundOrder) return res.status(404).json({ error: "Order not found" });
+      
+      // Return order without sensitive user information
+      const { user, ...orderData } = foundOrder;
+      res.json(orderData);
+    } catch (e) {
+      res.status(500).json({ error: "Failed" });
+    }
+  });
 
   router.get("/", authMiddleware, async (req, res) => {
     try {
@@ -56,7 +100,8 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getOrd
           const p = map.get(it.productId) || {};
           return { productId: it.productId, quantity: Number(it.quantity || 1), price: Number(p.price || 0), name: p.name || "", image: (p.images || [])[0] || "", progress: { placed: Date.now() } };
         });
-        const order = { id: crypto.randomUUID(), user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: getLastCheckout()?.[req.user.email] || null };
+        const trackingId = generateTrackingId();
+        const order = { id: crypto.randomUUID(), trackingId, user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: getLastCheckout()?.[req.user.email] || null };
         await db.collection("orders").insertOne(order);
         await db.collection("cart").deleteMany({ user: req.user.email });
         return res.json(order);
@@ -67,7 +112,8 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getOrd
         const p = pmap.get(it.productId) || {};
         return { productId: it.productId, quantity: Number(it.quantity || 1), price: Number(p.price || 0), name: p.name || "", image: (p.images || [])[0] || "", progress: { placed: Date.now() } };
       });
-      const order = { id: String(Date.now()), user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: getLastCheckout()?.[req.user.email] || null };
+      const trackingId = generateTrackingId();
+      const order = { id: String(Date.now()), trackingId, user: req.user.email, items: enriched, status: "placed", createdAt: Date.now(), shipping: getLastCheckout()?.[req.user.email] || null };
       const orders = getOrders();
       const list = Array.isArray(orders[req.user.email]) ? orders[req.user.email] : [];
       orders[req.user.email] = [order, ...list];

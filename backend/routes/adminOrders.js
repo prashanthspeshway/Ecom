@@ -8,7 +8,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getOrd
       const db = getDb();
       if (db) {
         const list = await db.collection("orders").find({}).sort({ createdAt: -1 }).toArray();
-        return res.json(list.map((o) => ({ id: o.id || String(o._id), user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() })));
+        return res.json(list.map((o) => ({ id: o.id || String(o._id), trackingId: o.trackingId || null, user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() })));
       }
       const arr = Object.entries(getOrders()).flatMap(([email, list]) => (Array.isArray(list) ? list.map((o) => ({ ...o, user: email })) : []));
       arr.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
@@ -25,7 +25,7 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getOrd
       if (db) {
         const o = await db.collection("orders").findOne({ $or: [{ id }, { _id: id }] });
         if (!o) return res.status(404).json({ error: "Not found" });
-        return res.json({ id: o.id || String(o._id), user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now() });
+        return res.json({ id: o.id || String(o._id), trackingId: o.trackingId || null, user: o.user, items: o.items || [], status: o.status || "placed", createdAt: o.createdAt || Date.now(), shipping: o.shipping || null });
       }
       const orders = getOrders();
       for (const email of Object.keys(orders)) {

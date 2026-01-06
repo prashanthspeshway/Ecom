@@ -16,7 +16,11 @@ function currentKey(): string {
 function read(): Product[] {
   try {
     const raw = localStorage.getItem(currentKey());
-    return raw ? (JSON.parse(raw) as Product[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Ensure we return an array and filter out any invalid entries
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && item.id && typeof item.id !== 'undefined');
   } catch {
     return [];
   }
@@ -32,7 +36,11 @@ export function getWishlist(): Product[] {
 }
 
 export function isWishlisted(id: string): boolean {
-  return read().some((p) => p.id === id);
+  const items = read();
+  if (!Array.isArray(items) || items.length === 0) return false;
+  // Convert both to strings for reliable comparison
+  const idStr = String(id);
+  return items.some((p) => p && p.id && String(p.id) === idStr);
 }
 
 export function toggleWishlist(product: Product) {
@@ -43,17 +51,25 @@ export function toggleWishlist(product: Product) {
     return;
   }
   const items = read();
-  const idx = items.findIndex((p) => p.id === product.id);
-  if (idx >= 0) {
+  if (!Array.isArray(items)) {
+    write([]);
+    return;
+  }
+  // Convert both to strings for reliable comparison
+  const productIdStr = String(product.id);
+  const idx = items.findIndex((p) => p && p.id && String(p.id) === productIdStr);
+  const wasWishlisted = idx >= 0;
+  
+  if (wasWishlisted) {
     items.splice(idx, 1);
   } else {
     items.push(product);
   }
   write(items);
+  
   if (token) {
-    const exists = idx >= 0;
-    if (exists) {
-      authFetch(`/api/wishlist?productId=${encodeURIComponent(product.id)}`, { method: "DELETE" })
+    if (wasWishlisted) {
+      authFetch(`/api/wishlist/${encodeURIComponent(product.id)}`, { method: "DELETE" })
         .then(() => { syncWishlistFromServer().catch(() => {}); })
         .catch(() => {});
     } else {
@@ -73,9 +89,10 @@ export function removeFromWishlist(id: string) {
     window.location.href = dest;
     return;
   }
-  write(read().filter((p) => p.id !== id));
+  const idStr = String(id);
+  write(read().filter((p) => p && p.id && String(p.id) !== idStr));
   if (token) {
-    authFetch(`/api/wishlist?productId=${encodeURIComponent(id)}`, { method: "DELETE" })
+    authFetch(`/api/wishlist/${encodeURIComponent(id)}`, { method: "DELETE" })
       .then(() => { syncWishlistFromServer().catch(() => {}); })
       .catch(() => {});
   }
@@ -99,8 +116,18 @@ export function clearWishlist() {
 export async function syncWishlistFromServer() {
   const token = getToken();
   if (!token) return;
-  const res = await authFetch("/api/wishlist");
-  if (!res.ok) return;
-  const data = (await res.json()) as Product[];
-  write(data);
+  try {
+    const res = await authFetch("/api/wishlist");
+    if (!res.ok) return;
+    const data = (await res.json()) as Product[];
+    // Ensure we only write valid product arrays
+    if (Array.isArray(data)) {
+      write(data);
+    } else {
+      write([]);
+    }
+  } catch (error) {
+    // If sync fails, don't overwrite existing wishlist
+    console.error("Failed to sync wishlist from server:", error);
+  }
 }

@@ -12,7 +12,7 @@ import { authFetch, getRole } from "@/lib/auth";
 type ProgressT = { placed?: number; dispatched?: number; shipped?: number; delivered?: number };
 type Item = { productId: string; name: string; image?: string; quantity: number; price?: number; progress?: ProgressT };
 type Shipping = { first?: string; last?: string; email?: string; phone?: string; address?: string | { line1?: string; line2?: string }; city?: string; state?: string; pincode?: string; postalCode?: string } | null;
-type Order = { id: string; user?: string; items: Item[]; status: string; createdAt: number; shipping?: Shipping };
+type Order = { id: string; trackingId?: string; user?: string; items: Item[]; status: string; createdAt: number; shipping?: Shipping };
 
 const stages = ["placed", "dispatched", "in_transit", "shipped", "out_for_delivery", "delivered"] as const;
 
@@ -81,7 +81,25 @@ const OrderTracking = () => {
   return (
     <div className="container px-4 py-8">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="font-serif text-2xl md:text-3xl font-bold">Order #{order.id}</h1>
+        <div>
+          <h1 className="font-serif text-2xl md:text-3xl font-bold">Order #{order.id}</h1>
+          {order.trackingId && (
+            <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+              Tracking ID: <span className="font-mono font-semibold text-foreground">{order.trackingId}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => {
+                  navigator.clipboard.writeText(order.trackingId!);
+                  toast.success("Tracking ID copied to clipboard");
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="text-sm text-muted-foreground">{new Date(order.createdAt || Date.now()).toLocaleString()}</div>
       </div>
 
