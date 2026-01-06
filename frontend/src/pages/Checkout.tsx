@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authFetch, getToken, apiBase } from "@/lib/auth";
+import { authFetch, getToken, getApiUrl } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
 import { indianStates, stateCities } from "@/data/indianStatesCities";
 
@@ -92,7 +92,7 @@ const Checkout = () => {
     authFetch("/api/cart").then(async (res) => { if (!res.ok) return; const data = await res.json(); setItems(data || []); });
     
     // Load shipping charges from settings
-    fetch(`${apiBase}/api/settings`).then(async (res) => {
+    fetch(getApiUrl("/api/settings")).then(async (res) => {
       if (res.ok) {
         const data = await res.json();
         if (data.shippingCharges && Array.isArray(data.shippingCharges)) {

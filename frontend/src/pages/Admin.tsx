@@ -6,7 +6,7 @@ import ProductCard from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { authFetch, getRole, getToken, apiBase, syncRoleFromBackend } from "@/lib/auth";
+import { authFetch, getRole, getToken, getApiUrl, syncRoleFromBackend } from "@/lib/auth";
  
 import type { Product } from "@/types/product";
 import { ImagePlus, FileUp } from "lucide-react";
@@ -167,7 +167,7 @@ const Admin = () => {
   const { data: categoriesData = [] } = useQuery<string[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/categories`);
+      const res = await fetch(getApiUrl("/api/categories"));
       return res.json();
     },
   });
@@ -177,7 +177,7 @@ const Admin = () => {
       const cats = categoriesData || [];
       if (!cats.length) return {} as Record<string, string[]>;
       const entries = await Promise.all(cats.map(async (c) => {
-        const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(c)}`);
+        const res = await fetch(getApiUrl(`/api/subcategories?category=${encodeURIComponent(c)}`));
         const arr = await res.json();
         return [c, arr] as const;
       }));
@@ -308,7 +308,7 @@ const Admin = () => {
     queryFn: async () => {
       const cat = form.category;
       if (!cat) return [];
-      const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(cat)}`);
+      const res = await fetch(getApiUrl(`/api/subcategories?category=${encodeURIComponent(cat)}`));
       return res.json();
     },
     enabled: !!form.category,
@@ -316,7 +316,7 @@ const Admin = () => {
   const { data: banners = [] } = useQuery<string[]>({
     queryKey: ["banners"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/banners`);
+      const res = await fetch(getApiUrl("/api/banners"));
       return res.json();
     },
   });
@@ -497,7 +497,7 @@ const Admin = () => {
   const { data: carousel = [] } = useQuery<string[]>({
     queryKey: ["carousel"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/carousel`);
+      const res = await fetch(getApiUrl("/api/carousel"));
       return res.json();
     },
   });

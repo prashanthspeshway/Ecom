@@ -1,7 +1,7 @@
-import { apiBase } from "./auth";
+import { getApiUrl } from "./auth";
 
 export async function fetchJSON(url: string) {
-  const target = url.startsWith("/") ? `${apiBase}${url}` : url;
+  const target = url.startsWith("http://") || url.startsWith("https://") ? url : getApiUrl(url);
   const res = await fetch(target);
   if (!res.ok) throw new Error(String(res.status));
   return res.json();

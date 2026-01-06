@@ -35,25 +35,40 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
 const app = express();
 // CORS Configuration
+const defaultOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:8080",
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "https://ecom.speshwayhrms.com",
+  "https://ecomb.speshwayhrms.com",
+  "https://www.ecomb.speshwayhrms.com",
+];
+
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
-  : [
-      process.env.FRONTEND_URL || "http://localhost:8080",
-      "http://localhost:8080",
-      "http://localhost:5173",
-      "https://ecom.speshwayhrms.com",
-      "https://ecomb.speshwayhrms.com",
-      "https://www.ecomb.speshwayhrms.com",
-    ];
+  ? [
+      ...process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()),
+      ...defaultOrigins,
+    ]
+  : defaultOrigins;
+
+// Remove duplicates
+const uniqueOrigins = [...new Set(allowedOrigins)];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== "production") {
+      return callback(null, true);
+    }
+    
+    // In production, check against allowed origins
+    if (uniqueOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked origin: ${origin}. Allowed origins:`, uniqueOrigins);
       callback(new Error("Not allowed by CORS"));
     }
   },

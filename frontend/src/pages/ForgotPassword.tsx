@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
 
 const ForgotPassword = () => {
@@ -17,7 +17,7 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${apiBase}/api/auth/forgot-password`, {
+      const res = await fetch(getApiUrl("/api/auth/forgot-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

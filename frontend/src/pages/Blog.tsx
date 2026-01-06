@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 import { Star, Calendar, X } from "lucide-react";
 import {
   Dialog,
@@ -24,7 +24,7 @@ const Blog = () => {
   const { data: blogs = [], isLoading } = useQuery<BlogPost[]>({
     queryKey: ["blogs"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/blogs`);
+      const res = await fetch(getApiUrl("/api/blogs"));
       if (!res.ok) return [];
       return res.json();
     },

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 import hero1 from "@/assets/hero-saree-1.jpg";
 import hero2 from "@/assets/hero-saree-2.jpg";
 import hero3 from "@/assets/hero-saree-3.jpg";
@@ -27,11 +27,11 @@ const HeroCarousel = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${apiBase}/api/carousel`);
+        const res = await fetch(getApiUrl("/api/carousel"));
         let images: string[] = [];
         if (res.ok) images = await res.json();
         if (!Array.isArray(images) || images.length === 0) {
-          const b = await fetch(`${apiBase}/api/banners`);
+          const b = await fetch(getApiUrl("/api/banners"));
           if (b.ok) images = await b.json();
         }
         if (Array.isArray(images) && images.length) {

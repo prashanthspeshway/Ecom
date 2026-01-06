@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -42,7 +42,7 @@ const ResetPassword = () => {
     setError(null);
 
     try {
-      const res = await fetch(`${apiBase}/api/auth/reset-password`, {
+      const res = await fetch(getApiUrl("/api/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),

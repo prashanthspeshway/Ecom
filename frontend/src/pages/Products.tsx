@@ -29,7 +29,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 
 function FiltersPanel({
   priceRange,
@@ -153,7 +153,7 @@ const Products = () => {
   const { data: categoriesData = [] } = useQuery<string[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/categories`);
+      const res = await fetch(getApiUrl("/api/categories"));
       return res.json();
     },
   });
@@ -164,7 +164,7 @@ const Products = () => {
       const cats = categoriesData || [];
       if (!cats.length) return {} as Record<string, string[]>;
       const entries = await Promise.all(cats.map(async (c) => {
-        const res = await fetch(`${apiBase}/api/subcategories?category=${encodeURIComponent(c)}`);
+        const res = await fetch(getApiUrl(`/api/subcategories?category=${encodeURIComponent(c)}`));
         const arr = await res.json();
         return [c, arr] as const;
       }));

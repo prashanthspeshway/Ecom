@@ -7,28 +7,28 @@ import { getProducts } from "@/lib/api";
 import type { Product } from "@/types/product";
 import { Button } from "@/components/ui/button";
 import { useQuery as useQueryRQ } from "@tanstack/react-query";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 
 const Home = () => {
   const { data } = useQuery<Product[]>({ queryKey: ["products"], queryFn: getProducts });
   const { data: banners = [] } = useQueryRQ<string[]>({
     queryKey: ["banners"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/banners`);
+      const res = await fetch(getApiUrl("/api/banners"));
       return res.json();
     },
   });
   const { data: bestsellers = [] } = useQueryRQ<Product[]>({
     queryKey: ["bestsellers"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/bestsellers`, { headers: {} });
+      const res = await fetch(getApiUrl("/api/bestsellers"), { headers: {} });
       return res.json();
     },
   });
   const { data: featured = [] } = useQueryRQ<Product[]>({
     queryKey: ["featured"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/featured`, { headers: {} });
+      const res = await fetch(getApiUrl("/api/featured"), { headers: {} });
       return res.json();
     },
   });
@@ -120,7 +120,7 @@ function CategoryTilesSection() {
   const { data: tiles = [] } = useQueryRQ<{ category: string; image: string; position?: number }[]>({
     queryKey: ["category-tiles"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/category-tiles`);
+      const res = await fetch(getApiUrl("/api/category-tiles"));
       return res.json();
     },
   });

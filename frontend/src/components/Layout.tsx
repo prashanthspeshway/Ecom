@@ -9,7 +9,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { getRole, getToken, clearAuth, apiBase, authFetch } from "@/lib/auth";
+import { getRole, getToken, clearAuth, getApiUrl, authFetch } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
 import { clearCart, getCount, syncCartFromServer } from "@/lib/cart";
 import { clearWishlist, syncWishlistFromServer } from "@/lib/wishlist";
@@ -96,7 +96,7 @@ const Layout = ({ children }: LayoutProps) => {
   const { data: footerPages = [] } = useQuery<{ slug: string; title: string }[]>({ 
     queryKey: ["footer-pages"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/pages`);
+      const res = await fetch(getApiUrl("/api/pages"));
       if (!res.ok) return [];
       return res.json();
     },
@@ -106,7 +106,7 @@ const Layout = ({ children }: LayoutProps) => {
   const { data: settings } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/settings`);
+      const res = await fetch(getApiUrl("/api/settings"));
       if (!res.ok) return null;
       return res.json();
     },

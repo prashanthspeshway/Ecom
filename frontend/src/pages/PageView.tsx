@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -16,7 +16,7 @@ const PageView = () => {
   const { data: page, isLoading, isError } = useQuery<{ slug: string; title: string; content: string }>({
     queryKey: ["page", slug],
     queryFn: async () => {
-      const res = await fetch(`${apiBase}/api/pages/${slug}`);
+      const res = await fetch(getApiUrl(`/api/pages/${slug}`));
       if (!res.ok) throw new Error("Page not found");
       return res.json();
     },

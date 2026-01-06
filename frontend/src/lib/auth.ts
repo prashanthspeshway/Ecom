@@ -22,7 +22,7 @@ export async function syncRoleFromBackend(): Promise<string | null> {
     const token = getToken();
     if (!token) return null;
     
-    const apiUrl = apiBase ? `${apiBase}/api/auth/me` : "/api/auth/me";
+    const apiUrl = getApiUrl("/api/auth/me");
     const res = await authFetch(apiUrl);
     if (res.ok) {
       const data = await res.json();
@@ -54,11 +54,25 @@ export function getEmail(): string | null {
   }
 }
 
+// Get API base URL - in production, this must be set to the backend URL
+// If empty, we'll use relative URLs (works only if frontend and backend are on same domain)
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+
+// Helper function to build API URLs
+export function getApiUrl(path: string): string {
+  if (apiBase) {
+    // Remove leading slash from path if apiBase already ends with /
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${apiBase}${cleanPath}`;
+  }
+  // Return relative URL (works in dev with proxy, but needs apiBase in production)
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
 export { apiBase };
 
 export async function register(payload: { email: string; password: string; name?: string; invite?: string }) {
-  const apiUrl = apiBase ? `${apiBase}/api/auth/register` : "/api/auth/register";
+  const apiUrl = getApiUrl("/api/auth/register");
   const res = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -96,7 +110,7 @@ export async function register(payload: { email: string; password: string; name?
 }
 
 export async function login(payload: { email: string; password: string }) {
-  const apiUrl = apiBase ? `${apiBase}/api/auth/login` : "/api/auth/login";
+  const apiUrl = getApiUrl("/api/auth/login");
   const res = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -137,8 +151,17 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   
   // Handle relative URLs with apiBase
   let url = input;
-  if (typeof input === "string" && input.startsWith("/") && apiBase) {
-    url = `${apiBase}${input}`;
+  if (typeof input === "string") {
+    if (input.startsWith("http://") || input.startsWith("https://")) {
+      // Already a full URL, use as-is
+      url = input;
+    } else if (input.startsWith("/")) {
+      // Relative URL - prepend apiBase if available
+      url = getApiUrl(input);
+    } else {
+      // Path without leading slash
+      url = getApiUrl(`/${input}`);
+    }
   }
   
   return fetch(url, { ...init, headers });

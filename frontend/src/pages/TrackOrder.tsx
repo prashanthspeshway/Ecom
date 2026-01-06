@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiBase } from "@/lib/auth";
+import { getApiUrl } from "@/lib/auth";
 import { Package, Search } from "lucide-react";
 
 type ProgressT = { placed?: number; dispatched?: number; in_transit?: number; shipped?: number; out_for_delivery?: number; delivered?: number };
@@ -32,7 +32,7 @@ const TrackOrder = () => {
     setOrder(null);
 
     try {
-      const res = await fetch(`${apiBase}/api/orders/track/${trackingId}`);
+      const res = await fetch(getApiUrl(`/api/orders/track/${trackingId}`));
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || "Order not found");
