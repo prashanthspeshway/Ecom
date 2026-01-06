@@ -40,6 +40,7 @@ const defaultOrigins = [
   "http://localhost:8080",
   "http://localhost:5173",
   "https://ecom.speshwayhrms.com",
+  "https://www.ecom.speshwayhrms.com",
   "https://ecomb.speshwayhrms.com",
   "https://www.ecomb.speshwayhrms.com",
 ];
