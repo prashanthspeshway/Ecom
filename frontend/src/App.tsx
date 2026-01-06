@@ -19,6 +19,9 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminSupport from "./pages/AdminSupport";
 import AdminSettings from "./pages/AdminSettings";
+import AdminBlogs from "./pages/AdminBlogs";
+import AdminGallery from "./pages/AdminGallery";
+import Blog from "./pages/Blog";
 import PageView from "./pages/PageView";
 import OrderTracking from "./pages/OrderTracking";
 import TrackOrder from "./pages/TrackOrder";
@@ -53,6 +56,9 @@ const App = () => (
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/support" element={<AdminSupport />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/blogs" element={<AdminBlogs />} />
+          <Route path="/admin/gallery" element={<AdminGallery />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/pages/:slug" element={<PageView />} />
           <Route path="/order/:id" element={<OrderTracking />} />
           <Route path="/track-order" element={<TrackOrder />} />

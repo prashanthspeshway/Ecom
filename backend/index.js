@@ -27,6 +27,8 @@ import registerCarousel from "./routes/carousel.js";
 import registerPages from "./routes/pages.js";
 import registerSettings from "./routes/settings.js";
 import registerPayments from "./routes/payments.js";
+import registerBlogs from "./routes/blogs.js";
+import registerGallery from "./routes/gallery.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +96,10 @@ const pagesPath = path.join(__dirname, "data", "pages.json");
 let pages = [];
 const settingsPath = path.join(__dirname, "data", "settings.json");
 let settings = {};
+const blogsPath = path.join(__dirname, "data", "blogs.json");
+let blogs = [];
+const blogCategoriesPath = path.join(__dirname, "data", "blog_categories.json");
+let blogCategories = [];
 
 function loadData() {
   try {
@@ -210,6 +216,22 @@ function loadData() {
     try { fs.mkdirSync(path.dirname(settingsPath), { recursive: true }); } catch {}
     try { fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2)); } catch {}
   }
+  try {
+    const raw = fs.readFileSync(blogsPath, "utf-8");
+    blogs = JSON.parse(raw);
+  } catch (e) {
+    blogs = [];
+    try { fs.mkdirSync(path.dirname(blogsPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(blogsPath, JSON.stringify(blogs, null, 2)); } catch {}
+  }
+  try {
+    const raw = fs.readFileSync(blogCategoriesPath, "utf-8");
+    blogCategories = JSON.parse(raw);
+  } catch (e) {
+    blogCategories = [];
+    try { fs.mkdirSync(path.dirname(blogCategoriesPath), { recursive: true }); } catch {}
+    try { fs.writeFileSync(blogCategoriesPath, JSON.stringify(blogCategories, null, 2)); } catch {}
+  }
 }
 
 loadData();
@@ -260,6 +282,14 @@ async function initDb() {
       const settingsColl = db.collection("settings");
       if (await settingsColl.countDocuments() === 0 && settings && typeof settings === "object" && Object.keys(settings).length) {
         await settingsColl.insertOne(settings);
+      }
+      const blogsColl = db.collection("blogs");
+      if (await blogsColl.countDocuments() === 0 && Array.isArray(blogs) && blogs.length) {
+        await blogsColl.insertMany(blogs);
+      }
+      const blogCategoriesColl = db.collection("blog_categories");
+      if (await blogCategoriesColl.countDocuments() === 0 && Array.isArray(blogCategories) && blogCategories.length) {
+        await blogCategoriesColl.insertMany(blogCategories.map(name => ({ name })));
       }
       const ordColl = db.collection("orders");
       if (await ordColl.countDocuments() === 0 && orders && typeof orders === "object") {
@@ -512,6 +542,29 @@ initDb().finally(() => {
       app,
       authMiddleware,
     });
+    registerBlogs({
+      app,
+      getDb: () => db,
+      authMiddleware,
+      adminOnly,
+      getBlogs: () => blogs,
+      setBlogs: (arr) => { blogs = arr; },
+      saveBlogs: saveBlogsToFile,
+      getBlogCategories: () => blogCategories,
+      setBlogCategories: (arr) => { blogCategories = arr; },
+      saveBlogCategories: saveBlogCategoriesToFile,
+    });
+    registerGallery({
+      app,
+      getDb: () => db,
+      authMiddleware,
+      adminOnly,
+      getProducts: () => products,
+      getBlogs: () => blogs,
+      getBanners: () => banners,
+      getCarousel: () => carousel,
+      getCategoryTiles: () => categoryTiles,
+    });
     app.listen(port, () => {
       console.log(`[backend] listening on http://localhost:${port}`);
     });
@@ -644,5 +697,17 @@ function savePagesToFile() {
 function saveSettingsToFile() {
   try {
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  } catch {}
+}
+
+function saveBlogsToFile() {
+  try {
+    fs.writeFileSync(blogsPath, JSON.stringify(blogs, null, 2));
+  } catch {}
+}
+
+function saveBlogCategoriesToFile() {
+  try {
+    fs.writeFileSync(blogCategoriesPath, JSON.stringify(blogCategories, null, 2));
   } catch {}
 }

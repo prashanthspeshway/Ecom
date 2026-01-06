@@ -164,7 +164,7 @@ const Layout = ({ children }: LayoutProps) => {
                   <Link to="/pages/about-us" className="text-lg font-medium hover:text-primary">
                     About Us
                   </Link>
-                  <Link to="/pages/blog" className="text-lg font-medium hover:text-primary">
+                  <Link to="/blog" className="text-lg font-medium hover:text-primary">
                     Blog
                   </Link>
                 </nav>
@@ -195,7 +195,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <Link to="/pages/about-us" className="text-sm font-medium hover:text-primary transition-colors">
                   About Us
                 </Link>
-                <Link to="/pages/blog" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link to="/blog" className="text-sm font-medium hover:text-primary transition-colors">
                   Blog
                 </Link>
               </nav>
@@ -236,6 +236,12 @@ const Layout = ({ children }: LayoutProps) => {
                 </Link>
                 <Link to="/admin/support">
                   <Button variant="ghost">Support</Button>
+                </Link>
+                <Link to="/admin/blogs">
+                  <Button variant="ghost">Blogs</Button>
+                </Link>
+                <Link to="/admin/gallery">
+                  <Button variant="ghost">Gallery</Button>
                 </Link>
                 <Link to="/admin/settings">
                   <Button variant="ghost">Settings</Button>
