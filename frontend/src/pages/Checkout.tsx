@@ -3,22 +3,103 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authFetch, getToken } from "@/lib/auth";
+import { authFetch, getToken, apiBase } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
+import { indianStates, stateCities } from "@/data/indianStatesCities";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<{ product: { id: string; name: string; images: string[]; price: number }; quantity: number }[]>([]);
   const [pmethod, setPmethod] = useState("razorpay");
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
-  const [coupon, setCoupon] = useState("");
   const [addr, setAddr] = useState({ first: "", last: "", email: "", phone: "", address: "", city: "", state: "", pincode: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [shippingCharges, setShippingCharges] = useState<Array<{ state: string; city: string; charge: number }>>([]);
+  
+  // Validation functions
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  
+  const validatePhone = (phone: string): boolean => {
+    // Must be exactly 10 digits and start with 9876
+    const phoneRegex = /^9876\d{6}$/;
+    return phoneRegex.test(phone);
+  };
+  
+  const validateName = (name: string): boolean => {
+    // Name should be at least 2 characters and contain only letters and spaces
+    const nameRegex = /^[a-zA-Z\s]{2,}$/;
+    return nameRegex.test(name.trim());
+  };
+  
+  const validateAllFields = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!addr.first.trim()) {
+      newErrors.first = "First name is required";
+    } else if (!validateName(addr.first)) {
+      newErrors.first = "Please enter a valid first name";
+    }
+    
+    if (!addr.last.trim()) {
+      newErrors.last = "Last name is required";
+    } else if (!validateName(addr.last)) {
+      newErrors.last = "Please enter a valid last name";
+    }
+    
+    if (!addr.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!validateEmail(addr.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    
+    if (!addr.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!validatePhone(addr.phone)) {
+      newErrors.phone = "Phone must be 10 digits starting with 9876";
+    }
+    
+    if (!addr.address.trim()) {
+      newErrors.address = "Address is required";
+    }
+    
+    if (!addr.state) {
+      newErrors.state = "State is required";
+    }
+    
+    if (!addr.city) {
+      newErrors.city = "City is required";
+    }
+    
+    if (!addr.pincode.trim()) {
+      newErrors.pincode = "Pincode is required";
+    } else if (!/^\d{6}$/.test(addr.pincode)) {
+      newErrors.pincode = "Pincode must be 6 digits";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
   useEffect(() => {
     const t = getToken();
     if (!t) { navigate(`/login?redirect=${encodeURIComponent("/checkout")}`); return; }
     authFetch("/api/cart").then(async (res) => { if (!res.ok) return; const data = await res.json(); setItems(data || []); });
+    
+    // Load shipping charges from settings
+    fetch(`${apiBase}/api/settings`).then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        if (data.shippingCharges && Array.isArray(data.shippingCharges)) {
+          setShippingCharges(data.shippingCharges);
+        }
+      }
+    }).catch(() => {});
     
     // Load Razorpay script
     if (!(window as any).Razorpay) {
@@ -33,12 +114,39 @@ const Checkout = () => {
   }, [navigate]);
 
   const subtotal = useMemo(() => items.reduce((s, it) => s + Number(it.product.price || 0) * it.quantity, 0), [items]);
-  const shipping = 0;
+  const shipping = useMemo(() => {
+    if (!addr.state || !addr.city) return 0;
+    // First check for city-specific charge
+    const cityCharge = shippingCharges.find(
+      (sc) => sc.state === addr.state && sc.city === addr.city
+    );
+    if (cityCharge) return cityCharge.charge;
+    
+    // If no city-specific charge, check for state-wide charge (ALL cities)
+    const stateCharge = shippingCharges.find(
+      (sc) => sc.state === addr.state && sc.city === "ALL"
+    );
+    return stateCharge ? stateCharge.charge : 0;
+  }, [addr.state, addr.city, shippingCharges]);
   const tax = 0;
   const discount = 0;
   const total = subtotal + shipping + tax - discount;
 
-  const canPlace = items.length > 0 && addr.first && addr.last && addr.email && addr.phone && addr.address && addr.city && addr.state && addr.pincode;
+  // Helper function to check if all fields are filled (without showing errors)
+  const areAllFieldsFilled = (): boolean => {
+    return !!(
+      addr.first.trim() &&
+      addr.last.trim() &&
+      addr.email.trim() &&
+      addr.phone.trim() &&
+      addr.address.trim() &&
+      addr.state &&
+      addr.city &&
+      addr.pincode.trim()
+    );
+  };
+  
+  const canPlace = items.length > 0 && areAllFieldsFilled();
 
   return (
     <div className="container px-4 py-8">
@@ -54,40 +162,166 @@ const Checkout = () => {
             <div className="grid gap-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" value={addr.first} onChange={(e) => setAddr({ ...addr, first: e.target.value })} />
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input 
+                    id="firstName" 
+                    value={addr.first} 
+                    onChange={(e) => {
+                      setAddr({ ...addr, first: e.target.value });
+                      if (errors.first) {
+                        const newErrors = { ...errors };
+                        delete newErrors.first;
+                        setErrors(newErrors);
+                      }
+                    }}
+                    className={errors.first ? "border-red-500" : ""}
+                  />
+                  {errors.first && <p className="text-sm text-red-500 mt-1">{errors.first}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" value={addr.last} onChange={(e) => setAddr({ ...addr, last: e.target.value })} />
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input 
+                    id="lastName" 
+                    value={addr.last} 
+                    onChange={(e) => {
+                      setAddr({ ...addr, last: e.target.value });
+                      if (errors.last) {
+                        const newErrors = { ...errors };
+                        delete newErrors.last;
+                        setErrors(newErrors);
+                      }
+                    }}
+                    className={errors.last ? "border-red-500" : ""}
+                  />
+                  {errors.last && <p className="text-sm text-red-500 mt-1">{errors.last}</p>}
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={addr.email} onChange={(e) => setAddr({ ...addr, email: e.target.value })} />
+                  <Label htmlFor="email">Email *</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={addr.email} 
+                    onChange={(e) => {
+                      setAddr({ ...addr, email: e.target.value });
+                      if (errors.email) {
+                        const newErrors = { ...errors };
+                        delete newErrors.email;
+                        setErrors(newErrors);
+                      }
+                    }}
+                    className={errors.email ? "border-red-500" : ""}
+                  />
+                  {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" type="tel" value={addr.phone} onChange={(e) => setAddr({ ...addr, phone: e.target.value })} />
+                  <Label htmlFor="phone">Phone * (10 digits starting with 9876)</Label>
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    maxLength={10}
+                    value={addr.phone} 
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                      setAddr({ ...addr, phone: value });
+                      if (errors.phone) {
+                        const newErrors = { ...errors };
+                        delete newErrors.phone;
+                        setErrors(newErrors);
+                      }
+                    }}
+                    className={errors.phone ? "border-red-500" : ""}
+                    placeholder="9876XXXXXX"
+                  />
+                  {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
                 </div>
               </div>
               <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" value={addr.address} onChange={(e) => setAddr({ ...addr, address: e.target.value })} />
+                <Label htmlFor="address">Address *</Label>
+                <Input 
+                  id="address" 
+                  value={addr.address} 
+                  onChange={(e) => {
+                    setAddr({ ...addr, address: e.target.value });
+                    if (errors.address) {
+                      const newErrors = { ...errors };
+                      delete newErrors.address;
+                      setErrors(newErrors);
+                    }
+                  }}
+                  className={errors.address ? "border-red-500" : ""}
+                />
+                {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} />
+                  <Label htmlFor="state">State *</Label>
+                  <Select 
+                    value={addr.state} 
+                    onValueChange={(value) => { 
+                      setAddr({ ...addr, state: value, city: "" });
+                      if (errors.state) {
+                        const newErrors = { ...errors };
+                        delete newErrors.state;
+                        setErrors(newErrors);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="state" className={errors.state ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {indianStates.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input id="state" value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} />
+                  <Label htmlFor="city">City *</Label>
+                  <Select 
+                    value={addr.city} 
+                    onValueChange={(value) => {
+                      setAddr({ ...addr, city: value });
+                      if (errors.city) {
+                        const newErrors = { ...errors };
+                        delete newErrors.city;
+                        setErrors(newErrors);
+                      }
+                    }} 
+                    disabled={!addr.state}
+                  >
+                    <SelectTrigger id="city" className={errors.city ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select City" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {addr.state && stateCities[addr.state]?.map((city) => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="pincode">Pincode</Label>
-                  <Input id="pincode" value={addr.pincode} onChange={(e) => setAddr({ ...addr, pincode: e.target.value })} />
+                  <Label htmlFor="pincode">Pincode *</Label>
+                  <Input 
+                    id="pincode" 
+                    maxLength={6}
+                    value={addr.pincode} 
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                      setAddr({ ...addr, pincode: value });
+                      if (errors.pincode) {
+                        const newErrors = { ...errors };
+                        delete newErrors.pincode;
+                        setErrors(newErrors);
+                      }
+                    }}
+                    className={errors.pincode ? "border-red-500" : ""}
+                  />
+                  {errors.pincode && <p className="text-sm text-red-500 mt-1">{errors.pincode}</p>}
                 </div>
               </div>
             </div>
@@ -123,18 +357,28 @@ const Checkout = () => {
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 mb-4">
-              <Input placeholder="Enter promo code" value={coupon} onChange={(e) => setCoupon(e.target.value)} />
-              <Button variant="secondary">Apply</Button>
-            </div>
             <div className="space-y-4 mb-6">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-semibold">₹{subtotal}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span className="font-semibold">FREE</span></div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shipping</span>
+                <span className="font-semibold">{shipping === 0 ? "FREE" : `₹${shipping}`}</span>
+              </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span className="font-semibold">₹{tax}</span></div>
               <Separator />
               <div className="flex justify-between text-lg"><span className="font-semibold">Total</span><span className="font-bold">₹{total}</span></div>
             </div>
-            <Button size="lg" className="w-full" disabled={!canPlace || (pmethod === "razorpay" && !razorpayLoaded)} onClick={async () => {
+            <Button size="lg" className="w-full" disabled={pmethod === "razorpay" && !razorpayLoaded} onClick={async () => {
+              // Validate all fields before proceeding
+              if (!validateAllFields()) {
+                toast.error("Please fill all fields correctly");
+                return;
+              }
+              
+              if (items.length === 0) {
+                toast.error("Your cart is empty");
+                return;
+              }
+              
               if (pmethod === "razorpay") {
                 // Handle Razorpay payment
                 try {

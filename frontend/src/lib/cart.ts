@@ -62,28 +62,44 @@ export function addToCart(product: Product, quantity = 1) {
   }
 }
 
-export function updateQuantity(productId: string, quantity: number) {
+export function updateQuantity(productId: string, quantity: number): { success: boolean; message?: string } {
   const token = getToken();
   if (!token) {
     const dest = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     window.location.href = dest;
-    return;
+    return { success: false };
   }
   const items = read();
   const idx = items.findIndex((i) => i.product.id === productId);
   if (idx >= 0) {
-    items[idx].quantity = Math.max(1, quantity);
+    const product = items[idx].product;
+    
+    if (quantity > (product.stock || 999999)) {
+      return { 
+        success: false, 
+        message: `Only ${product.stock} items available in stock. Cannot exceed available quantity.` 
+      };
+    }
+    
+    const newQuantity = Math.max(1, Math.min(quantity, product.stock || 999999));
+    items[idx].quantity = newQuantity;
     write(items);
+    
     if (token) {
       authFetch("/api/cart", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: Math.max(1, quantity) }),
+        body: JSON.stringify({ productId, quantity: newQuantity }),
       }).then(() => {
-        syncCartFromServer().catch(() => {});
-      }).catch(() => {});
+        // Don't sync immediately - let the local state handle it
+        // The cart:update event will trigger UI refresh
+      }).catch(() => {
+        // If server update fails, still keep local changes
+      });
     }
+    return { success: true };
   }
+  return { success: false, message: "Product not found in cart" };
 }
 
 export function removeFromCart(productId: string) {
@@ -93,12 +109,20 @@ export function removeFromCart(productId: string) {
     window.location.href = dest;
     return;
   }
-  const items = read().filter((i) => i.product.id !== productId);
-  write(items);
+  const items = read();
+  const filteredItems = items.filter((i) => i.product.id !== productId);
+  write(filteredItems);
+  
   if (token) {
-    authFetch(`/api/cart?productId=${encodeURIComponent(productId)}`, { method: "DELETE" })
-      .then(() => { syncCartFromServer().catch(() => {}); })
-      .catch(() => {});
+    // Use path parameter instead of query parameter
+    authFetch(`/api/cart/${encodeURIComponent(productId)}`, { method: "DELETE" })
+      .then(() => {
+        // Don't sync immediately - let the local state handle it
+        // The cart:update event will trigger UI refresh
+      })
+      .catch(() => {
+        // If server delete fails, still keep local changes
+      });
   }
 }
 

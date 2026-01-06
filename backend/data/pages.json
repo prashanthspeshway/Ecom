@@ -2,13 +2,31 @@
   {
     "slug": "about-us",
     "title": "About Us",
-    "content": "<h1>About Us</h1><p>Welcome to Saree Elegance. We are dedicated to providing premium handcrafted sarees.</p>",
+    "content": "<h1>About Us</h1><p>Welcome to Savitri Saree Mandir. We are dedicated to providing premium handcrafted sarees.</p>",
     "updatedAt": 1766040547071
   },
   {
     "slug": "contact-us",
     "title": "Contact Us",
-    "content": "<h1>Contact Us</h1><p>Get in touch with us for any queries or support.</p>",
+    "content": "<h1>Contact Us</h1><p>Get in touch with Savitri Saree Mandir for any queries or support.</p>",
+    "updatedAt": 1766040547071
+  },
+  {
+    "slug": "returns-policy",
+    "title": "Returns Policy",
+    "content": "<h1>Returns Policy</h1><p>Returns and exchange policy for Savitri Saree Mandir.</p>",
+    "updatedAt": 1766040547071
+  },
+  {
+    "slug": "privacy-policy",
+    "title": "Privacy Policy",
+    "content": "<h1>Privacy Policy</h1><p>Privacy policy for Savitri Saree Mandir.</p>",
+    "updatedAt": 1766040547071
+  },
+  {
+    "slug": "terms-conditions",
+    "title": "Terms & Conditions",
+    "content": "<h1>Terms & Conditions</h1><p>Terms and conditions for Savitri Saree Mandir.</p>",
     "updatedAt": 1766040547071
   }
 ]

@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { authFetch, getRole, getToken } from "@/lib/auth";
 import { toast } from "@/components/ui/sonner";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
+import { indianStates, stateCities } from "@/data/indianStatesCities";
 
 const AdminSettings = () => {
   const navigate = useNavigate();
@@ -23,8 +25,13 @@ const AdminSettings = () => {
       { name: "Instagram", url: "" },
       { name: "Facebook", url: "" },
     ],
+    shippingCharges: [] as Array<{ state: string; city: string; charge: number }>,
   });
   const [loading, setLoading] = useState(false);
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [shippingCharge, setShippingCharge] = useState("");
+  const [applyToAllCities, setApplyToAllCities] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -88,6 +95,10 @@ const AdminSettings = () => {
             { name: "Instagram", url: data.instagramUrl || "" },
             { name: "Facebook", url: data.facebookUrl || "" },
           ];
+        }
+        // Ensure shippingCharges exists
+        if (!data.shippingCharges || !Array.isArray(data.shippingCharges)) {
+          data.shippingCharges = [];
         }
         setSettings(data);
       }
@@ -264,6 +275,163 @@ const AdminSettings = () => {
           </div>
 
           <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold mb-4">Shipping Charges</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Set shipping charges for different states and cities. Charges are in ₹ (Indian Rupees). You can set a charge for all cities in a state or for specific cities.
+            </p>
+            
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>State</Label>
+                  <Select value={selectedState} onValueChange={(value) => { setSelectedState(value); setSelectedCity(""); setApplyToAllCities(false); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {indianStates.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>City</Label>
+                  <Select 
+                    value={selectedCity} 
+                    onValueChange={(value) => {
+                      setSelectedCity(value);
+                      setApplyToAllCities(value === "ALL");
+                    }} 
+                    disabled={!selectedState || applyToAllCities}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={applyToAllCities ? "All Cities" : "Select City"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Cities in {selectedState}</SelectItem>
+                      {selectedState && stateCities[selectedState]?.map((city) => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Shipping Charge (₹)</Label>
+                  <Input
+                    type="number"
+                    value={shippingCharge}
+                    onChange={(e) => setShippingCharge(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="apply-all-cities"
+                  checked={applyToAllCities}
+                  onChange={(e) => {
+                    setApplyToAllCities(e.target.checked);
+                    if (e.target.checked) {
+                      setSelectedCity("ALL");
+                    } else {
+                      setSelectedCity("");
+                    }
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="apply-all-cities" className="cursor-pointer">
+                  Apply to all cities in {selectedState || "selected state"}
+                </Label>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!selectedState || !shippingCharge) {
+                    toast.error("Please select state and enter shipping charge");
+                    return;
+                  }
+                  if (!applyToAllCities && !selectedCity) {
+                    toast.error("Please select a city or check 'Apply to all cities'");
+                    return;
+                  }
+                  const charge = parseFloat(shippingCharge);
+                  if (isNaN(charge) || charge < 0) {
+                    toast.error("Please enter a valid shipping charge");
+                    return;
+                  }
+                  
+                  const cityValue = applyToAllCities ? "ALL" : selectedCity;
+                  
+                  // Check if entry already exists
+                  const existingIndex = settings.shippingCharges.findIndex(
+                    (sc) => sc.state === selectedState && sc.city === cityValue
+                  );
+                  const newCharges = [...(settings.shippingCharges || [])];
+                  
+                  if (existingIndex >= 0) {
+                    newCharges[existingIndex] = { state: selectedState, city: cityValue, charge };
+                    toast.success("Shipping charge updated");
+                  } else {
+                    newCharges.push({ state: selectedState, city: cityValue, charge });
+                    toast.success(applyToAllCities ? `Shipping charge added for all cities in ${selectedState}` : "Shipping charge added");
+                  }
+                  setSettings({ ...settings, shippingCharges: newCharges });
+                  setSelectedState("");
+                  setSelectedCity("");
+                  setShippingCharge("");
+                  setApplyToAllCities(false);
+                }}
+                disabled={!selectedState || !shippingCharge || (!applyToAllCities && !selectedCity)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Shipping Charge
+              </Button>
+            </div>
+
+            {settings.shippingCharges && settings.shippingCharges.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-3 font-semibold">State</th>
+                        <th className="text-left p-3 font-semibold">City</th>
+                        <th className="text-right p-3 font-semibold">Charge (₹)</th>
+                        <th className="text-center p-3 font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {settings.shippingCharges.map((sc, index) => (
+                        <tr key={index} className="border-t">
+                          <td className="p-3">{sc.state}</td>
+                          <td className="p-3">{sc.city === "ALL" ? <span className="font-semibold text-primary">All Cities</span> : sc.city}</td>
+                          <td className="p-3 text-right font-semibold">₹{sc.charge}</td>
+                          <td className="p-3 text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newCharges = settings.shippingCharges.filter((_, i) => i !== index);
+                                setSettings({ ...settings, shippingCharges: newCharges });
+                                toast.success("Shipping charge removed");
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t pt-6">
             <Button onClick={saveSettings} disabled={loading}>
               {loading ? "Saving..." : "Save Settings"}
             </Button>
@@ -275,6 +443,8 @@ const AdminSettings = () => {
 };
 
 export default AdminSettings;
+
+
 
 
 

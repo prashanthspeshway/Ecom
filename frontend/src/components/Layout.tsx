@@ -182,20 +182,20 @@ const Layout = ({ children }: LayoutProps) => {
             </Link>
 
             {role !== "admin" && (
-              <nav className="hidden md:flex items-center gap-6">
-                <Link to="/products" className="text-sm font-medium hover:text-primary transition-colors">
+              <nav className="hidden md:flex items-center gap-0">
+                <Link to="/products" className="text-sm font-medium hover:text-primary transition-colors px-2">
                   Shop
                 </Link>
-                <Link to="/products?category=sale" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link to="/products?category=sale" className="text-sm font-medium hover:text-primary transition-colors px-2">
                   Sale
                 </Link>
-                <Link to="/products?category=bestsellers" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link to="/products?category=bestsellers" className="text-sm font-medium hover:text-primary transition-colors px-2">
                   Best Sellers
                 </Link>
-                <Link to="/pages/about-us" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link to="/pages/about-us" className="text-sm font-medium hover:text-primary transition-colors px-2">
                   About Us
                 </Link>
-                <Link to="/blog" className="text-sm font-medium hover:text-primary transition-colors">
+                <Link to="/blog" className="text-sm font-medium hover:text-primary transition-colors px-2">
                   Blog
                 </Link>
               </nav>

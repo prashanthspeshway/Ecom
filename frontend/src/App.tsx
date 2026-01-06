@@ -20,6 +20,7 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminSupport from "./pages/AdminSupport";
 import AdminSettings from "./pages/AdminSettings";
 import AdminBlogs from "./pages/AdminBlogs";
+import AdminAboutUs from "./pages/AdminAboutUs";
 import AdminGallery from "./pages/AdminGallery";
 import Blog from "./pages/Blog";
 import PageView from "./pages/PageView";
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/admin/support" element={<AdminSupport />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/blogs" element={<AdminBlogs />} />
+          <Route path="/admin/about-us" element={<AdminAboutUs />} />
           <Route path="/admin/gallery" element={<AdminGallery />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/pages/:slug" element={<PageView />} />

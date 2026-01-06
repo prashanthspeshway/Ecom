@@ -6,11 +6,21 @@ import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import type { CartItem } from "@/types/product";
 import { getCart, updateQuantity, removeFromCart } from "@/lib/cart";
+import { toast } from "@/components/ui/sonner";
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>(getCart());
+  
   useEffect(() => {
-    const handler = () => setCartItems(getCart());
+    // Initial load
+    setCartItems(getCart());
+  }, []);
+  
+  useEffect(() => {
+    const handler = () => {
+      const updatedCart = getCart();
+      setCartItems(updatedCart);
+    };
     window.addEventListener("cart:update", handler as EventListener);
     window.addEventListener("storage", handler);
     return () => {
@@ -43,23 +53,85 @@ const Cart = () => {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
           {cartItems.map(({ product, quantity }) => (
-            <div key={product.id} className="flex items-center justify-between border rounded-lg p-4">
-              <div className="flex items-center gap-4">
-                <img src={product.images?.[0] ?? "/placeholder.svg"} alt={product.name} className="w-16 h-16 rounded-md object-cover" />
-                <div>
-                  <p className="font-semibold">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">₹{product.price.toLocaleString()}</p>
+            <div key={product.id} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src={product.images?.[0] ?? "/placeholder.svg"} alt={product.name} className="w-16 h-16 rounded-md object-cover" />
+                  <div>
+                    <p className="font-semibold">{product.name}</p>
+                    <p className="text-sm text-muted-foreground">₹{product.price.toLocaleString()}</p>
+                    {product.stock !== undefined && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {product.stock} available in stock
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-lg">
-                  <Button variant="ghost" size="sm" onClick={() => { updateQuantity(product.id, Math.max(1, quantity - 1)); }}>-</Button>
-                  <span className="px-4 py-2">{quantity}</span>
-                  <Button variant="ghost" size="sm" onClick={() => { updateQuantity(product.id, quantity + 1); }}>+</Button>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border rounded-lg">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newQty = Math.max(1, quantity - 1);
+                        const result = updateQuantity(product.id, newQty);
+                        if (!result.success && result.message) {
+                          toast.error(result.message);
+                        } else {
+                          // Force update state immediately
+                          setTimeout(() => {
+                            setCartItems(getCart());
+                          }, 100);
+                        }
+                      }}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="px-4 py-2 min-w-[3rem] text-center">{quantity}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newQty = quantity + 1;
+                        if (newQty > (product.stock || 0)) {
+                          toast.error(`Only ${product.stock} items available in stock. Cannot exceed available quantity.`);
+                          return;
+                        }
+                        const result = updateQuantity(product.id, newQty);
+                        if (!result.success && result.message) {
+                          toast.error(result.message);
+                        } else {
+                          // Force update state immediately
+                          setTimeout(() => {
+                            setCartItems(getCart());
+                          }, 100);
+                        }
+                      }}
+                      disabled={quantity >= (product.stock || 0)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeFromCart(product.id);
+                      // Force update state immediately
+                      setTimeout(() => {
+                        setCartItems(getCart());
+                      }, 100);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => { removeFromCart(product.id); }}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           ))}
@@ -85,13 +157,6 @@ const Cart = () => {
                 <span className="font-semibold">Total</span>
                 <span className="font-bold">₹{total.toLocaleString()}</span>
               </div>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <Input placeholder="Enter promo code" />
-              <Button variant="outline" className="w-full">
-                Apply Code
-              </Button>
             </div>
 
             <Link to="/checkout">

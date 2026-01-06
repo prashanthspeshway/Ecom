@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -318,6 +320,180 @@ const Admin = () => {
       return res.json();
     },
   });
+  const [bannerCropImage, setBannerCropImage] = useState<string | null>(null);
+  const [bannerCrop, setBannerCrop] = useState({ x: 0, y: 0 });
+  const [bannerZoom, setBannerZoom] = useState(1);
+  const [bannerCroppedAreaPixels, setBannerCroppedAreaPixels] = useState<Area | null>(null);
+  const [isEditingBanner, setIsEditingBanner] = useState(false);
+
+  // Banner crop functions
+  const onBannerCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+    setBannerCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createBannerImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      if (url.startsWith("https://") && !url.startsWith("blob:")) {
+        image.crossOrigin = "anonymous";
+      }
+      const timeout = setTimeout(() => {
+        reject(new Error("Image load timeout"));
+      }, 10000);
+      image.addEventListener("load", () => {
+        clearTimeout(timeout);
+        if (image.naturalWidth === 0 || image.naturalHeight === 0) {
+          reject(new Error("Image failed to load properly"));
+        } else {
+          resolve(image);
+        }
+      });
+      image.addEventListener("error", () => {
+        clearTimeout(timeout);
+        reject(new Error("Failed to load image"));
+      });
+      image.src = url;
+    });
+
+  const getBannerCroppedImg = async (
+    imageSrc: string,
+    pixelCrop: Area
+  ): Promise<Blob> => {
+    const image = await createBannerImage(imageSrc);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    const sourceX = pixelCrop.x * scaleX;
+    const sourceY = pixelCrop.y * scaleY;
+    const sourceWidth = pixelCrop.width * scaleX;
+    const sourceHeight = pixelCrop.height * scaleY;
+
+    const outputWidth = Math.round(pixelCrop.width);
+    const outputHeight = Math.round(pixelCrop.height);
+    
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    ctx.drawImage(
+      image,
+      Math.round(sourceX),
+      Math.round(sourceY),
+      Math.round(sourceWidth),
+      Math.round(sourceHeight),
+      0,
+      0,
+      outputWidth,
+      outputHeight
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Failed to create blob"));
+          }
+        },
+        "image/jpeg",
+        0.95
+      );
+    });
+  };
+
+  const handleBannerCropComplete = async () => {
+    if (!bannerCropImage || !bannerCroppedAreaPixels) {
+      toast.error("Please crop the image first");
+      return;
+    }
+
+    try {
+      if (bannerCroppedAreaPixels.width <= 0 || bannerCroppedAreaPixels.height <= 0) {
+        toast.error("Invalid crop area");
+        return;
+      }
+
+      const croppedBlob = await getBannerCroppedImg(bannerCropImage, bannerCroppedAreaPixels);
+      
+      if (!croppedBlob || croppedBlob.size === 0) {
+        toast.error("Failed to create cropped image");
+        return;
+      }
+
+      const croppedFile = new File([croppedBlob], `banner-${Date.now()}.jpg`, { type: "image/jpeg" });
+      const fd = new FormData();
+      fd.append("files", croppedFile);
+      
+      const res = await authFetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) {
+        toast.error("Failed to upload cropped image");
+        return;
+      }
+
+      const data = await res.json();
+      const urls = data.urls || [];
+      if (urls.length) {
+        // Delete all existing banners first
+        if (banners.length > 0) {
+          const deletePromises = banners.map(banner => 
+            authFetch("/api/banners", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: banner }),
+            })
+          );
+          await Promise.all(deletePromises);
+        }
+        // Add new banner
+        addBannersMutation.mutate([urls[0]]);
+        toast.success("Banner cropped and uploaded successfully");
+      }
+
+      // Close crop dialog
+      if (bannerCropImage.startsWith("blob:")) {
+        URL.revokeObjectURL(bannerCropImage);
+      }
+      setBannerCropImage(null);
+      setBannerCroppedAreaPixels(null);
+      setIsEditingBanner(false);
+    } catch (e: any) {
+      console.error("Banner crop error:", e);
+      toast.error(e?.message || "Failed to crop banner");
+    }
+  };
+
+  const handleBannerCropCancel = () => {
+    if (bannerCropImage && bannerCropImage.startsWith("blob:")) {
+      URL.revokeObjectURL(bannerCropImage);
+    }
+    setBannerCropImage(null);
+    setBannerCroppedAreaPixels(null);
+    setIsEditingBanner(false);
+  };
+
+  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    setBannerCropImage(imageUrl);
+    setBannerCrop({ x: 0, y: 0 });
+    setBannerZoom(1);
+    setBannerCroppedAreaPixels(null);
+    setIsEditingBanner(true);
+    
+    e.target.value = "";
+  };
   const { data: carousel = [] } = useQuery<string[]>({
     queryKey: ["carousel"],
     queryFn: async () => {
@@ -344,13 +520,18 @@ const Admin = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ urls }),
       });
-      if (!res.ok) throw new Error("Add banners failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Add banners failed");
+      }
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["banners"] });
       qc.refetchQueries({ queryKey: ["banners"] });
-      toast("Banner updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add banners");
     },
   });
   const deleteBannerMutation = useMutation({
@@ -360,12 +541,19 @@ const Admin = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      if (!res.ok) throw new Error("Delete banner failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Delete banner failed");
+      }
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["banners"] });
       qc.refetchQueries({ queryKey: ["banners"] });
+      toast.success("Banner removed successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete banner");
     },
   });
 
@@ -732,23 +920,212 @@ const Admin = () => {
     });
     const [files, setFiles] = useState<(File | null)[]>([null, null, null, null, null, null]);
     const [values, setValues] = useState<string[]>(["", "", "", "", "", ""]);
+    const [cropImage, setCropImage] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+    const [currentPosition, setCurrentPosition] = useState<number | null>(null);
+
+    const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+      setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
+
+    const createImage = (url: string): Promise<HTMLImageElement> =>
+      new Promise((resolve, reject) => {
+        const image = new Image();
+        // Don't set crossOrigin for blob URLs or local URLs - it causes CORS errors
+        // Only set for external URLs (https://) that might need CORS
+        if (url.startsWith("https://") && !url.startsWith("blob:")) {
+          image.crossOrigin = "anonymous";
+        }
+        
+        // Set timeout to catch images that never load
+        const timeout = setTimeout(() => {
+          reject(new Error("Image load timeout. Please check the image URL."));
+        }, 10000); // 10 second timeout
+        
+        image.addEventListener("load", () => {
+          clearTimeout(timeout);
+          if (image.naturalWidth === 0 || image.naturalHeight === 0) {
+            reject(new Error("Image failed to load properly"));
+          } else {
+            resolve(image);
+          }
+        });
+        image.addEventListener("error", (event) => {
+          clearTimeout(timeout);
+          console.error("Image load error:", event, url);
+          reject(new Error("Failed to load image. Please try again."));
+        });
+        
+        image.src = url;
+      });
+
+    const getCroppedImg = async (
+      imageSrc: string,
+      pixelCrop: Area
+    ): Promise<Blob> => {
+      const image = await createImage(imageSrc);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("No 2d context");
+      }
+
+      // Get the scale factor between displayed image and natural image
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      // Calculate actual crop coordinates in natural image dimensions
+      const sourceX = pixelCrop.x * scaleX;
+      const sourceY = pixelCrop.y * scaleY;
+      const sourceWidth = pixelCrop.width * scaleX;
+      const sourceHeight = pixelCrop.height * scaleY;
+
+      // Set canvas to exact crop size
+      const outputWidth = Math.round(pixelCrop.width);
+      const outputHeight = Math.round(pixelCrop.height);
+      
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+
+      // Enable image smoothing for better quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      // Draw the cropped portion
+      ctx.drawImage(
+        image,
+        Math.round(sourceX),
+        Math.round(sourceY),
+        Math.round(sourceWidth),
+        Math.round(sourceHeight),
+        0,
+        0,
+        outputWidth,
+        outputHeight
+      );
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Failed to create blob from canvas"));
+            }
+          },
+          "image/jpeg",
+          0.95
+        );
+      });
+    };
+
+    const handleCropComplete = async () => {
+      if (!cropImage || !croppedAreaPixels || currentPosition === null) {
+        toast.error("Please crop the image first");
+        return;
+      }
+
+      try {
+        // Validate crop area
+        if (croppedAreaPixels.width <= 0 || croppedAreaPixels.height <= 0) {
+          toast.error("Invalid crop area. Please adjust the crop selection.");
+          return;
+        }
+
+        const croppedBlob = await getCroppedImg(cropImage, croppedAreaPixels);
+        
+        if (!croppedBlob || croppedBlob.size === 0) {
+          toast.error("Failed to create cropped image. Please try again.");
+          return;
+        }
+
+        const croppedFile = new File([croppedBlob], `cropped-image-${Date.now()}.jpg`, { type: "image/jpeg" });
+        
+        // Set the cropped file and close dialog
+        const newFiles = [...files];
+        newFiles[currentPosition] = croppedFile;
+        setFiles(newFiles);
+        
+        // Close crop dialog
+        if (cropImage.startsWith("blob:")) {
+          URL.revokeObjectURL(cropImage);
+        }
+        setCropImage(null);
+        setCroppedAreaPixels(null);
+        setCurrentPosition(null);
+        
+        toast.success("Image cropped successfully. Click 'Add' to upload.");
+      } catch (e: any) {
+        console.error("Crop error:", e);
+        const errorMessage = e?.message || "Failed to crop image";
+        toast.error(errorMessage);
+      }
+    };
+
+    const handleCropCancel = () => {
+      if (cropImage && cropImage.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImage);
+      }
+      setCropImage(null);
+      setCroppedAreaPixels(null);
+      setCurrentPosition(null);
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, pos: number) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Show crop dialog
+      const imageUrl = URL.createObjectURL(file);
+      setCropImage(imageUrl);
+      // Initialize crop to center - will be adjusted by react-easy-crop
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedAreaPixels(null);
+      setCurrentPosition(pos);
+      
+      // Reset file input
+      e.target.value = "";
+    };
+
     const addMutation = useMutation({
       mutationFn: async (pos: number) => {
         const category = values[pos];
         const file = files[pos];
-        if (!category || !file) throw new Error("Select category and image");
-        const fd = new FormData();
-        fd.append("files", file);
-        const upRes = await authFetch("/api/upload", { method: "POST", body: fd });
-        if (!upRes.ok) throw new Error("Upload failed");
-        const up = await upRes.json();
-        const image = (up.urls || [])[0];
+        const existingTile = tileByPos[pos];
+        
+        if (!category) throw new Error("Select category");
+        
+        let image = existingTile?.image;
+        
+        // If there's a new file (cropped), upload it
+        if (file) {
+          const fd = new FormData();
+          fd.append("files", file);
+          const upRes = await authFetch("/api/upload", { method: "POST", body: fd });
+          if (!upRes.ok) {
+            const errorData = await upRes.json().catch(() => ({}));
+            throw new Error(errorData.error || "Upload failed");
+          }
+          const up = await upRes.json();
+          image = (up.urls || [])[0];
+          if (!image) throw new Error("Failed to get uploaded image URL");
+        } else if (!existingTile) {
+          throw new Error("Select and crop an image");
+        }
+        
         const res = await authFetch("/api/category-tiles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ category, image, position: pos }),
         });
-        if (!res.ok) throw new Error("Save failed");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || "Save failed");
+        }
         return res.json();
       },
       onSuccess: (_data, pos) => {
@@ -762,8 +1139,12 @@ const Admin = () => {
         });
         qc.invalidateQueries({ queryKey: ["category-tiles"] });
         qc.refetchQueries({ queryKey: ["category-tiles"] });
-        toast("Category tile updated");
+        toast.success("Category tile updated successfully");
         setFiles((fs) => { const nf = [...fs]; nf[pos] = null; return nf; });
+        setEditingPosition(null);
+      },
+      onError: (error: Error) => {
+        toast.error(error.message || "Failed to save category tile");
       },
     });
     const delMutation = useMutation({
@@ -783,6 +1164,21 @@ const Admin = () => {
     });
     const tileByPos: Record<number, { category: string; image: string } | undefined> = {};
     for (const t of tiles) tileByPos[t.position] = { category: t.category, image: t.image };
+    
+    // Initialize values from existing tiles on mount
+    useEffect(() => {
+      if (tiles.length > 0) {
+        const newValues = [...values];
+        tiles.forEach((tile) => {
+          if (tile.position >= 0 && tile.position < 6) {
+            newValues[tile.position] = tile.category;
+          }
+        });
+        setValues(newValues);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
+    
     return (
       <div className="space-y-6">
         {[0,1,2,3,4,5].map((pos) => (
@@ -797,8 +1193,18 @@ const Admin = () => {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <input type="file" accept="image/*" onChange={(e) => setFiles((fs) => { const nf = [...fs]; nf[pos] = e.target.files?.[0] || null; return nf; })} />
-            <Button onClick={() => addMutation.mutate(pos)} disabled={!values[pos] || !files[pos]}>Add</Button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => handleFileSelect(e, pos)}
+              className="text-sm"
+            />
+            <Button 
+              onClick={() => addMutation.mutate(pos)} 
+              disabled={!values[pos] || addMutation.isPending}
+            >
+              {addMutation.isPending ? "Saving..." : (tileByPos[pos] ? "Update" : "Add")}
+            </Button>
             {tileByPos[pos] && (
               <div className="flex items-center gap-2">
                 <img src={tileByPos[pos]!.image || "/placeholder.svg"} alt={tileByPos[pos]!.category} className="w-16 h-16 rounded object-cover" />
@@ -808,6 +1214,55 @@ const Admin = () => {
             )}
           </div>
         ))}
+        
+        {/* Image Crop Dialog */}
+        <Dialog open={!!cropImage} onOpenChange={(open) => !open && handleCropCancel()}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Crop Image for Category Tile</DialogTitle>
+            </DialogHeader>
+            {cropImage && (
+              <div className="space-y-4">
+                <div className="relative w-full h-[500px] bg-black rounded-lg overflow-hidden">
+                  <Cropper
+                    image={cropImage}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={onCropComplete}
+                    cropShape="rect"
+                    showGrid={true}
+                    restrictPosition={false}
+                    minZoom={0.5}
+                    maxZoom={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Zoom</Label>
+                  <input
+                    type="range"
+                    value={zoom}
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={handleCropCancel}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCropComplete} disabled={!croppedAreaPixels}>
+                    Apply Crop
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -1219,46 +1674,112 @@ const Admin = () => {
 
         <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
           <h2 className="font-serif text-2xl font-bold">Banner Container</h2>
-          <div className="flex gap-2 items-center">
-            <input
-              id="banner-file"
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={async (e) => {
-                const list = Array.from(e.target.files || []);
-                if (!list.length) return;
-                const fd = new FormData();
-                list.forEach((f) => fd.append("files", f));
-                const res = await authFetch("/api/upload", { method: "POST", body: fd });
-                const data = await res.json();
-                const urls = data.urls || [];
-                if (urls.length) addBannersMutation.mutate(urls);
-                const bannerEl = document.getElementById("banner-file") as HTMLInputElement | null;
-                if (bannerEl) bannerEl.value = "";
-              }}
-            />
-            <Button variant="secondary" onClick={() => (document.getElementById("banner-file") as HTMLInputElement | null)?.click()}>Upload Images</Button>
-          </div>
-          {banners.length > 0 && (
-            <div className="rounded-lg overflow-hidden border bg-card">
-              <img src={banners[0]} alt="Banner" className="w-full h-[260px] md:h-[320px] object-cover" />
-            </div>
-          )}
-          {banners.length > 1 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {banners.slice(1).map((u) => (
-                <div key={u} className="rounded-lg overflow-hidden border relative">
-                  <img src={u} alt="banner" className="w-full h-24 object-cover" />
-                  <div className="absolute bottom-2 right-2">
-                    <Button variant="destructive" size="sm" onClick={() => deleteBannerMutation.mutate(u)}>Delete</Button>
-                  </div>
+          {banners.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Current Banner</h3>
+                <div className="flex gap-2">
+                  <input
+                    id="banner-file-edit"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleBannerFileSelect}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => (document.getElementById("banner-file-edit") as HTMLInputElement | null)?.click()}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Banner
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => {
+                      if (confirm("Are you sure you want to delete this banner?")) {
+                        deleteBannerMutation.mutate(banners[0]);
+                      }
+                    }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Remove
+                  </Button>
                 </div>
-              ))}
+              </div>
+              <div className="rounded-lg overflow-hidden border bg-card">
+                <img src={banners[0]} alt="Banner" className="w-full h-[260px] md:h-[320px] lg:h-[400px] object-cover" />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <input
+                  id="banner-file"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerFileSelect}
+                />
+                <Button variant="secondary" onClick={() => (document.getElementById("banner-file") as HTMLInputElement | null)?.click()}>
+                  Upload Banner Image
+                </Button>
+              </div>
+              <div className="border-2 border-dashed rounded-lg p-12 text-center text-muted-foreground">
+                <p>No banner image uploaded yet</p>
+                <p className="text-sm mt-2">Click "Upload Banner Image" to add a banner</p>
+              </div>
             </div>
           )}
         </div>
+
+        {/* Banner Crop Dialog */}
+        <Dialog open={!!bannerCropImage} onOpenChange={(open) => !open && handleBannerCropCancel()}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Crop Banner Image (16:5 ratio)</DialogTitle>
+            </DialogHeader>
+            {bannerCropImage && (
+              <div className="space-y-4">
+                <div className="relative w-full h-[500px] bg-black rounded-lg overflow-hidden">
+                  <Cropper
+                    image={bannerCropImage}
+                    crop={bannerCrop}
+                    zoom={bannerZoom}
+                    aspect={16 / 5}
+                    onCropChange={setBannerCrop}
+                    onZoomChange={setBannerZoom}
+                    onCropComplete={onBannerCropComplete}
+                    cropShape="rect"
+                    showGrid={true}
+                    restrictPosition={false}
+                    minZoom={0.5}
+                    maxZoom={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Zoom</Label>
+                  <input
+                    type="range"
+                    value={bannerZoom}
+                    min={0.5}
+                    max={3}
+                    step={0.1}
+                    onChange={(e) => setBannerZoom(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={handleBannerCropCancel}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBannerCropComplete} disabled={!bannerCroppedAreaPixels}>
+                    Apply Crop & Upload
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
         <div className="md:col-span-2 bg-card rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-serif text-2xl font-bold">Categories</h2>

@@ -240,30 +240,32 @@ const AdminSupport = () => {
             ) : (
               <>
                 <div className="space-y-2 mb-4">
-                  {pages.map((page) => (
-                    <div key={page.slug} className="flex items-center justify-between border rounded-lg p-3">
-                      <div>
-                        <div className="font-semibold">{page.title}</div>
-                        <div className="text-sm text-muted-foreground">/{page.slug}</div>
+                  {pages
+                    .filter((p) => p.slug !== "about-us" && p.slug !== "blog")
+                    .map((page) => (
+                      <div key={page.slug} className="flex items-center justify-between border rounded-lg p-3">
+                        <div>
+                          <div className="font-semibold">{page.title}</div>
+                          <div className="text-sm text-muted-foreground">/{page.slug}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingPage({ ...page })}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deletePage(page.slug)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingPage({ ...page })}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deletePage(page.slug)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
                 <Button
                   onClick={() => setEditingPage({ slug: "", title: "", content: "" })}
@@ -281,6 +283,7 @@ const AdminSupport = () => {
 };
 
 export default AdminSupport;
+
 
 
 

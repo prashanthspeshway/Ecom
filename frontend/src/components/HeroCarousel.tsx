@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiBase } from "@/lib/auth";
@@ -68,9 +69,11 @@ const HeroCarousel = () => {
                 <p className="text-xl md:text-2xl text-white/90">
                   {slide.subtitle}
                 </p>
-                <Button size="lg" className="mt-4 bg-primary hover:bg-primary/90">
-                  Shop Now
-                </Button>
+                <Link to="/products">
+                  <Button size="lg" className="mt-4 bg-primary hover:bg-primary/90">
+                    Shop Now
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

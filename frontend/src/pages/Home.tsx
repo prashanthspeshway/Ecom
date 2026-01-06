@@ -61,11 +61,13 @@ const Home = () => {
       )}
 
       {banners.length > 0 && (
-        <section className="py-12">
-          <div className="container px-4">
-            <div className="rounded-lg overflow-hidden border bg-card">
-              <img src={banners[0]} alt="Banner" className="w-full h-[260px] md:h-[320px] object-cover" />
-            </div>
+        <section className="py-12 w-full" style={{ marginLeft: 'calc(-50vw + 50%)', marginRight: 'calc(-50vw + 50%)', width: '100vw' }}>
+          <div className="w-full">
+            <img 
+              src={banners[0]} 
+              alt="Banner" 
+              className="w-full h-[300px] md:h-[400px] lg:h-[500px] object-cover" 
+            />
           </div>
         </section>
       )}
@@ -100,9 +102,11 @@ const Home = () => {
               using time-honored techniques passed down through generations. Experience the
               perfect blend of heritage and contemporary elegance.
             </p>
-            <Button size="lg" variant="secondary" className="mt-4">
-              Learn Our Story
-            </Button>
+            <Link to="/pages/about-us">
+              <Button size="lg" variant="secondary" className="mt-4">
+                Learn Our Story
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

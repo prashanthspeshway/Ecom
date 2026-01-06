@@ -20,20 +20,31 @@ export default function register({ app, getDb, authMiddleware, adminOnly, getBan
 
   router.post("/", authMiddleware, adminOnly, async (req, res) => {
     try {
-      const { url } = req.body || {};
-      if (!url || typeof url !== "string") return res.status(400).json({ error: "URL required" });
+      const { url, urls } = req.body || {};
+      const urlList = urls || (url ? [url] : []);
+      if (!Array.isArray(urlList) || urlList.length === 0) {
+        return res.status(400).json({ error: "URL or URLs array required" });
+      }
       const db = getDb();
       if (db) {
-        const exists = await db.collection("banners").findOne({ url });
-        if (exists) return res.json({ success: true });
-        await db.collection("banners").insertOne({ url });
+        for (const bannerUrl of urlList) {
+          if (typeof bannerUrl !== "string") continue;
+          const exists = await db.collection("banners").findOne({ url: bannerUrl });
+          if (!exists) {
+            await db.collection("banners").insertOne({ url: bannerUrl });
+          }
+        }
         return res.json({ success: true });
       }
       const banners = getBanners();
-      if (!banners.includes(url)) {
-        setBanners([...banners, url]);
-        saveBanners();
-      }
+      const newBanners = [...banners];
+      urlList.forEach((bannerUrl) => {
+        if (typeof bannerUrl === "string" && !newBanners.includes(bannerUrl)) {
+          newBanners.push(bannerUrl);
+        }
+      });
+      setBanners(newBanners);
+      saveBanners();
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: "Failed" });
