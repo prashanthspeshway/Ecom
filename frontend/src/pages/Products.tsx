@@ -148,8 +148,13 @@ const Products = () => {
   const [priceRange, setPriceRange] = useState([0, 30000]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState("popularity");
   
-  const { data } = useQuery<Product[]>({ queryKey: ["products"], queryFn: getProducts });
+  const { data, isLoading, error } = useQuery<Product[]>({ 
+    queryKey: ["products"], 
+    queryFn: getProducts,
+    retry: 2,
+  });
   const { data: categoriesData = [] } = useQuery<string[]>({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -179,8 +184,8 @@ const Products = () => {
   const subParam = useMemo(() => new URLSearchParams(location.search).get("sub"), [location.search]);
   
   const products = useMemo(() => {
-    const list = (data || []).filter((p) => {
-      const matchesQuery = query ? (p.name.toLowerCase().includes(query) || p.brand.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) : true;
+    let list = (data || []).filter((p) => {
+      const matchesQuery = query ? (p.name.toLowerCase().includes(query) || (p.brand && p.brand.toLowerCase().includes(query)) || p.category.toLowerCase().includes(query)) : true;
       const matchesCategoryParam = (() => {
         if (subParam) return p.category.toLowerCase().includes(subParam.toLowerCase());
         if (categoryParam) {
@@ -217,15 +222,44 @@ const Products = () => {
       const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
       return matchesQuery && matchesCategoryParam && matchesCategorySelection && matchesPrice;
     });
+    
+    // Apply sorting
+    switch (sortBy) {
+      case "price-low":
+        list = [...list].sort((a, b) => (a.price || 0) - (b.price || 0));
+        break;
+      case "price-high":
+        list = [...list].sort((a, b) => (b.price || 0) - (a.price || 0));
+        break;
+      case "new":
+        list = [...list].sort((a, b) => {
+          const aDate = a.createdAt || a.id || 0;
+          const bDate = b.createdAt || b.id || 0;
+          return Number(bDate) - Number(aDate);
+        });
+        break;
+      case "popularity":
+      default:
+        // Keep original order or sort by bestseller/sale flags
+        list = [...list].sort((a, b) => {
+          if (a.isBestseller && !b.isBestseller) return -1;
+          if (!a.isBestseller && b.isBestseller) return 1;
+          if (a.isSale && !b.isSale) return -1;
+          if (!a.isSale && b.isSale) return 1;
+          return 0;
+        });
+        break;
+    }
+    
     return list;
-  }, [data, query, categoryParam, subParam, selectedCategories, selectedSubcategories, priceRange]);
+  }, [data, query, categoryParam, subParam, selectedCategories, selectedSubcategories, priceRange, sortBy]);
 
   return (
     <div className="container px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl md:text-4xl font-bold">Shop Sarees</h1>
         <div className="flex items-center gap-4">
-          <Select defaultValue="popularity">
+          <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
@@ -344,11 +378,44 @@ const Products = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} compact />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-destructive text-lg font-semibold mb-2">Failed to load products</p>
+            <p className="text-muted-foreground">Please try refreshing the page.</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && products.length === 0 && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-lg font-semibold mb-2">No products found</p>
+            <p className="text-muted-foreground">
+              {selectedCategories.length > 0 || selectedSubcategories.length > 0 || priceRange[0] > 0 || priceRange[1] < 30000
+                ? "Try adjusting your filters to see more products."
+                : "No products are available at the moment."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && products.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} compact />
+          ))}
+        </div>
+      )}
         </div>
       </div>
     </div>
