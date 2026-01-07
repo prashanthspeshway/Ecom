@@ -15,6 +15,7 @@ import { clearCart, getCount, syncCartFromServer } from "@/lib/cart";
 import { clearWishlist, syncWishlistFromServer } from "@/lib/wishlist";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { getEmail } from "@/lib/auth";
+import WhatsAppWidget from "./WhatsAppWidget";
 
 interface LayoutProps {
   children: ReactNode;
@@ -293,6 +294,8 @@ const Layout = ({ children }: LayoutProps) => {
       </header>
 
       <main className="flex-1">{children}</main>
+
+      <WhatsAppWidget />
 
       <footer className="border-t bg-card">
         <div className="container px-4 py-12">

@@ -21,6 +21,7 @@ const AdminSettings = () => {
     logoUrl: "",
     faviconUrl: "",
     description: "",
+    whatsappNumber: "",
     socialLinks: [
       { name: "Instagram", url: "" },
       { name: "Facebook", url: "" },
@@ -208,6 +209,24 @@ const AdminSettings = () => {
                   onChange={(e) => setSettings({ ...settings, faviconUrl: e.target.value })}
                   placeholder="https://example.com/favicon.ico"
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold mb-4">Contact & Communication</h2>
+            <div className="space-y-4 mb-6">
+              <div>
+                <Label htmlFor="whatsapp-number">WhatsApp Number</Label>
+                <Input
+                  id="whatsapp-number"
+                  value={settings.whatsappNumber || ""}
+                  onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
+                  placeholder="9876543210 or +919876543210"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enter your WhatsApp number (with or without country code). A floating WhatsApp button will appear on your website.
+                </p>
               </div>
             </div>
           </div>
