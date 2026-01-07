@@ -17,7 +17,6 @@ import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
-import AdminSupport from "./pages/AdminSupport";
 import AdminSettings from "./pages/AdminSettings";
 import AdminBlogs from "./pages/AdminBlogs";
 import AdminAboutUs from "./pages/AdminAboutUs";
@@ -55,7 +54,6 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/support" element={<AdminSupport />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/blogs" element={<AdminBlogs />} />
           <Route path="/admin/about-us" element={<AdminAboutUs />} />

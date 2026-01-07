@@ -234,9 +234,6 @@ const Layout = ({ children }: LayoutProps) => {
                     )}
                   </Button>
                 </Link>
-                <Link to="/admin/support">
-                  <Button variant="ghost">Support</Button>
-                </Link>
                 <Link to="/admin/blogs">
                   <Button variant="ghost">Blogs</Button>
                 </Link>
