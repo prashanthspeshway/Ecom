@@ -31,10 +31,20 @@ export default defineConfig(async ({ mode }) => {
     server: {
       host: "::",
       port: 8080,
-      allowedHosts: ["localhost", "127.0.0.1", "7114a8347d47.ngrok-free.app"],
+      // Allowed hosts for development and production
+      allowedHosts: [
+        "localhost",
+        "127.0.0.1",
+        "7114a8347d47.ngrok-free.app",
+        "ecom.speshwayhrms.com",
+        "www.ecom.speshwayhrms.com",
+        "ecomb.speshwayhrms.com",
+        "www.ecomb.speshwayhrms.com",
+      ],
       hmr: false,
       proxy: {
         "/api": {
+          // Development: localhost, Production: https://ecomb.speshwayhrms.com
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
@@ -70,9 +80,19 @@ export default defineConfig(async ({ mode }) => {
     preview: {
       host: "::",
       port: 8080,
-      allowedHosts: ["localhost", "127.0.0.1", "7114a8347d47.ngrok-free.app"],
+      // Allowed hosts for preview mode (production domains)
+      allowedHosts: [
+        "localhost",
+        "127.0.0.1",
+        "7114a8347d47.ngrok-free.app",
+        "ecom.speshwayhrms.com",
+        "www.ecom.speshwayhrms.com",
+        "ecomb.speshwayhrms.com",
+        "www.ecomb.speshwayhrms.com",
+      ],
       proxy: {
         "/api": {
+          // Development: localhost, Production: https://ecomb.speshwayhrms.com
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
@@ -86,6 +106,7 @@ export default defineConfig(async ({ mode }) => {
           },
         },
         "/uploads": {
+          // Development: localhost, Production: https://ecomb.speshwayhrms.com
           target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
