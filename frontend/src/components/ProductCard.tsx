@@ -94,14 +94,16 @@ const ProductCard = ({ product, compact }: ProductCardProps) => {
               <span
                 key={i}
                 className={`${compact ? "text-xs" : "text-sm"} ${
-                  i < Math.floor(product.rating) ? "text-accent" : "text-muted"
+                  i < Math.floor(product.rating || 0) ? "text-accent" : "text-muted"
                 }`}
               >
                 ★
               </span>
             ))}
           </div>
-          <span className={`${compact ? "text-xs" : "text-sm"} text-muted-foreground`}>({product.reviews.length})</span>
+          <span className={`${compact ? "text-xs" : "text-sm"} text-muted-foreground`}>
+            ({(product.reviews && Array.isArray(product.reviews) ? product.reviews.length : 0)})
+          </span>
         </div>
 
         <Button className="w-full mt-2" variant="outline" size={compact ? "sm" : "default"} onClick={() => addToCart(product, 1)}>
