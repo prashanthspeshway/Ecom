@@ -45,7 +45,7 @@ export default defineConfig(async ({ mode }) => {
       proxy: {
         "/api": {
           // Development: localhost, Production: https://ecomb.speshwayhrms.com
-          target: "http://localhost:3001",
+          target: "https://ecomb.speshwayhrms.com",
           changeOrigin: true,
           secure: false,
           timeout: 10000,
@@ -62,7 +62,7 @@ export default defineConfig(async ({ mode }) => {
         },
         "/uploads": {
           // Development: localhost, Production: https://ecomb.speshwayhrms.com
-          target: "http://localhost:3001",
+          target: "https://ecomb.speshwayhrms.com",
           changeOrigin: true,
           secure: false,
           timeout: 10000,
@@ -90,11 +90,12 @@ export default defineConfig(async ({ mode }) => {
         "www.ecom.speshwayhrms.com",
         "ecomb.speshwayhrms.com",
         "www.ecomb.speshwayhrms.com",
+        "https://ecomb.speshwayhrms.com"
       ],
       proxy: {
         "/api": {
           // Development: localhost, Production: https://ecomb.speshwayhrms.com
-          target: "http://localhost:3001",
+          target: "https://ecomb.speshwayhrms.com",
           changeOrigin: true,
           secure: false,
           timeout: 10000,
@@ -108,7 +109,7 @@ export default defineConfig(async ({ mode }) => {
         },
         "/uploads": {
           // Development: localhost, Production: https://ecomb.speshwayhrms.com
-          target: "http://localhost:3001",
+          target: "https://ecomb.speshwayhrms.com",
           changeOrigin: true,
           secure: false,
           timeout: 10000,
