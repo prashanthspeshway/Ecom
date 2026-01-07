@@ -29,11 +29,8 @@ All frontend files now use `getApiUrl()` instead of direct `apiBase` concatenati
 **CRITICAL:** Set `VITE_API_BASE_URL` to your backend URL:
 
 ```env
-VITE_API_BASE_URL=https://ecom.speshwayhrms.com
-# OR if backend is on different subdomain:
-VITE_API_BASE_URL=https://api.speshwayhrms.com
-# OR if backend is on different port:
-VITE_API_BASE_URL=https://ecom.speshwayhrms.com:3001
+VITE_API_BASE_URL=https://ecomb.speshwayhrms.com
+# Production backend URL
 ```
 
 **Important Notes:**
@@ -83,7 +80,7 @@ node index.js
 
 **Test Backend:**
 ```bash
-curl https://ecom.speshwayhrms.com/api/products
+curl https://ecomb.speshwayhrms.com/api/products
 # Should return JSON, not error
 ```
 

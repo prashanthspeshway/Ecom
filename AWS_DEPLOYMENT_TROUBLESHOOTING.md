@@ -18,16 +18,11 @@ VITE_API_BASE_URL=https://api.yourdomain.com
 - **Do NOT include trailing slash**
 
 **Example for your setup:**
-If your frontend is at `https://ecomb.speshwayhrms.com` and backend is at the same domain:
+- Frontend: `https://ecom.speshwayhrms.com`
+- Backend: `https://ecomb.speshwayhrms.com`
+
 ```env
 VITE_API_BASE_URL=https://ecomb.speshwayhrms.com
-```
-
-If backend is on a different port or subdomain:
-```env
-VITE_API_BASE_URL=https://api.speshwayhrms.com
-# OR
-VITE_API_BASE_URL=https://ecomb.speshwayhrms.com:3001
 ```
 
 #### 2. Verify Backend is Running and Accessible
@@ -35,8 +30,6 @@ VITE_API_BASE_URL=https://ecomb.speshwayhrms.com:3001
 Test if backend is accessible:
 ```bash
 curl https://ecomb.speshwayhrms.com/api/products
-# OR
-curl https://api.speshwayhrms.com/api/products
 ```
 
 Should return JSON, not an error.
@@ -45,8 +38,8 @@ Should return JSON, not an error.
 
 **Backend Environment (`backend/.env`):**
 ```env
-FRONTEND_URL=https://ecomb.speshwayhrms.com
-ALLOWED_ORIGINS=https://ecomb.speshwayhrms.com,https://www.ecomb.speshwayhrms.com
+FRONTEND_URL=https://ecom.speshwayhrms.com
+ALLOWED_ORIGINS=https://ecom.speshwayhrms.com,https://www.ecom.speshwayhrms.com
 ```
 
 **Verify:**
@@ -71,8 +64,9 @@ Common errors:
 **Backend `.env` should have:**
 ```env
 NODE_ENV=production
-FRONTEND_URL=https://ecomb.speshwayhrms.com
-ALLOWED_ORIGINS=https://ecomb.speshwayhrms.com,https://www.ecomb.speshwayhrms.com
+FRONTEND_URL=https://ecom.speshwayhrms.com
+ALLOWED_ORIGINS=https://ecom.speshwayhrms.com,https://www.ecom.speshwayhrms.com
+PUBLIC_BASE_URL=https://ecomb.speshwayhrms.com
 PORT=3001
 JWT_SECRET=<strong-secret>
 ```
@@ -159,8 +153,8 @@ npm run build
    - ✅ `VITE_API_BASE_URL=https://api.domain.com`
 
 4. **CORS Mismatch:**
-   - Frontend at: `https://ecomb.speshwayhrms.com`
-   - Backend `ALLOWED_ORIGINS` must include: `https://ecomb.speshwayhrms.com`
+   - Frontend at: `https://ecom.speshwayhrms.com`
+   - Backend `ALLOWED_ORIGINS` must include: `https://ecom.speshwayhrms.com`
 
 5. **Not Rebuilding After Env Changes:**
    - Must run `npm run build` after changing `.env` files
